@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="ParameterPreset" id="{1c26f985-2672-4105-a540-36525718b2e4}">
+		<property name="name">
+			<value>inIrisIntro</value>
+		</property>
+		<relationship name="folder">
+			<destination>{a418e0de-c7d0-05c9-280a-b529dc02e12e}</destination>
+		</relationship>
+		<relationship name="parameter">
+			<destination>{1df2388f-a773-4708-8beb-ae79927eee3d}</destination>
+		</relationship>
+	</object>
+	<object class="GameParameter" id="{1df2388f-a773-4708-8beb-ae79927eee3d}">
+		<property name="parameterType">
+			<value>1</value>
+		</property>
+		<property name="maximum">
+			<value>4</value>
+		</property>
+		<property name="initialValue">
+			<value>0</value>
+		</property>
+	</object>
+</objects>

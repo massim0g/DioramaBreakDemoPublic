@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="ParameterPreset" id="{94e3e380-527d-43be-8e8f-b8335de30676}">
+		<property name="name">
+			<value>inTenseCutscene</value>
+		</property>
+		<relationship name="folder">
+			<destination>{a418e0de-c7d0-05c9-280a-b529dc02e12e}</destination>
+		</relationship>
+		<relationship name="parameter">
+			<destination>{34f3cf1b-7cec-44db-8645-ca10d2bb2ddc}</destination>
+		</relationship>
+	</object>
+	<object class="GameParameter" id="{34f3cf1b-7cec-44db-8645-ca10d2bb2ddc}">
+		<property name="parameterType">
+			<value>1</value>
+		</property>
+		<property name="maximum">
+			<value>2</value>
+		</property>
+		<property name="initialValue">
+			<value>0</value>
+		</property>
+	</object>
+</objects>

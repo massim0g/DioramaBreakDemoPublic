@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.00.00">
+	<object class="Locale" id="{4c47f2c8-26a5-4542-b59e-7c28c629ba48}">
+		<property name="name">
+			<value>Chinese</value>
+		</property>
+		<property name="localeCode">
+			<value>CN</value>
+		</property>
+	</object>
+</objects>

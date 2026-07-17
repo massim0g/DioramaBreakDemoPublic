@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{21c08fda-0305-4741-a019-84cd98dab0a7}">
+		<property name="note">
+			<value>groundSurface values:
+
+0 = wood
+1 = grass
+2 = stone</value>
+		</property>
+		<property name="assetPath">
+			<value>DB_SFX/footsteps/db_footstep_grass_3.wav</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>48</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>0.1875</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{4c43130b-9186-4fb6-9d65-a9acdac70927}</destination>
+		</relationship>
+	</object>
+</objects>

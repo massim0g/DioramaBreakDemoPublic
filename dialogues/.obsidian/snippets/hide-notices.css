@@ -1,0 +1,3 @@
+.notice-container {
+  display: none !important;
+}

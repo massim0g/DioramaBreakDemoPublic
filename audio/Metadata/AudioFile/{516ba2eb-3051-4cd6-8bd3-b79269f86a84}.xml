@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{516ba2eb-3051-4cd6-8bd3-b79269f86a84}">
+		<property name="assetPath">
+			<value>DB_SFX/AirValvePneumaticRelease.wav</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>96</value>
+		</property>
+		<property name="channelCount">
+			<value>4</value>
+		</property>
+		<property name="length">
+			<value>1.4026666666666667</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{4c43130b-9186-4fb6-9d65-a9acdac70927}</destination>
+		</relationship>
+	</object>
+</objects>

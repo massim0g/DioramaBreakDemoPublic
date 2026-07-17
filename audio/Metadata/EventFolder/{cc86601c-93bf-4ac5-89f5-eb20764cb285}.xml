@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="EventFolder" id="{cc86601c-93bf-4ac5-89f5-eb20764cb285}">
+		<property name="name">
+			<value>Kion</value>
+		</property>
+		<relationship name="folder">
+			<destination>{0cabb526-352f-455e-adb4-6d1bc9b9f6c8}</destination>
+		</relationship>
+	</object>
+</objects>

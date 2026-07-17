@@ -1,0 +1,260 @@
+{
+  "backgroundColor": [
+    221.0000000000000000,
+    213.0000000000000000,
+    184.0000000000000000
+  ],
+  "bounds": {
+    "pos": [
+      -32.0000000000000000,
+      -32.0000000000000000
+    ],
+    "size": [
+      592.0000000000000000,
+      406.0000000000000000
+    ]
+  },
+  "collisionMesh": {
+    "edges": "",
+    "vertices": ""
+  },
+  "defaultFootstepSurface": "wood",
+  "entities": [
+    {
+      "id": "daf61143-b2a4-499f-ab97-ab938ddec518",
+      "requiredComponents": [
+        {
+          "maskSprite": "cargoLiftLoop",
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "cargoLiftLoop",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              487.0000000000000000,
+              268.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "name": "combatEntity"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9c236744-ffe5-4ed5-9e5f-a0343c104f7a",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "floor",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              3.0000000000000000,
+              4.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "name": "combatEntity"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9d59b112-c55b-46d1-80fc-4122bfe1c621",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "cargoLiftRopeFront",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              37.0000000000000000,
+              271.0000000000000000
+            ],
+            "z": -11.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "name": "combatEntity"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9d59b112-c55b-46d1-80fc-4122bfe1c621",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "cargoLiftRopeFront",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              488.0000000000000000,
+              273.0000000000000000
+            ],
+            "z": -15.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "name": "combatEntity"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "f9279ff7-66e7-4795-b0ec-892ac481ea82",
+      "requiredComponents": [
+        {
+          "name": "combatBounds"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              8.0000000000000000,
+              10.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            32.0000000000000000,
+            23.0000000000000000
+          ]
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "daf61143-b2a4-499f-ab97-ab938ddec518",
+      "requiredComponents": [
+        {
+          "maskSprite": "cargoLiftLoop",
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "cargoLiftLoop",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              38.0000000000000000,
+              270.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "name": "combatEntity"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    }
+  ],
+  "footstepSurfaceOverrides": [
+
+  ],
+  "format_version": "11",
+  "indoors": false,
+  "layers": [
+
+  ],
+  "lightBlend": [
+    238.0000000000000000,
+    229.0000000000000000,
+    190.0000000000000000,
+    51.0000000000000000
+  ],
+  "requiredTextureGroups": [
+    "stroma"
+  ],
+  "shadowBlend": [
+    69.0000000000000000,
+    69.0000000000000000,
+    69.0000000000000000,
+    114.0000000000000000
+  ]
+}

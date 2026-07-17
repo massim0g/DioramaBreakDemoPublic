@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="ParameterPreset" id="{dd8f63bd-091f-4c57-bae0-0c479dabfe65}">
+		<property name="name">
+			<value>InPrologue</value>
+		</property>
+		<relationship name="folder">
+			<destination>{10b074a6-a7ae-459c-9876-3b028d5ac306}</destination>
+		</relationship>
+		<relationship name="parameter">
+			<destination>{d57a2e22-c49f-41a8-a610-266a387ebff0}</destination>
+		</relationship>
+	</object>
+	<object class="GameParameter" id="{d57a2e22-c49f-41a8-a610-266a387ebff0}">
+		<property name="parameterType">
+			<value>1</value>
+		</property>
+		<property name="maximum">
+			<value>2</value>
+		</property>
+		<property name="initialValue">
+			<value>0</value>
+		</property>
+	</object>
+</objects>

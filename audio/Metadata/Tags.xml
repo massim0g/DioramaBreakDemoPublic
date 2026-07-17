@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="MasterTagFolder" id="{1b486b69-30e1-4779-90d4-f45386aa7367}">
+		<relationship name="items">
+			<destination>{2e193f8d-92b5-4f55-a7d7-fbd073e56354}</destination>
+			<destination>{b25c4f9d-1f47-4b94-89e1-8b05ecc39502}</destination>
+			<destination>{ff19646f-4dc8-43be-9d99-73cde9536edf}</destination>
+			<destination>{1b2729a6-7abf-4220-9cbc-a415743f03d6}</destination>
+			<destination>{c482be52-b48f-4e91-9a41-4429de5e55b3}</destination>
+			<destination>{106b1d43-b29e-4938-8809-4868fd036d2b}</destination>
+			<destination>{b621cb49-ebca-45dd-85fd-9af87c1d5a40}</destination>
+			<destination>{ad75f74d-248e-4b30-b41c-42bf6c059018}</destination>
+			<destination>{a0007824-27a5-4949-ae54-4df20f35ea51}</destination>
+			<destination>{ee45eecc-e25a-493b-bdcd-66a33f7336a5}</destination>
+			<destination>{032932ee-4178-4241-a136-2450347dcb6e}</destination>
+			<destination>{721cf887-761f-4cf4-a1cf-2e8790901610}</destination>
+			<destination>{95d562e5-0dc1-428c-9296-79fa91967a77}</destination>
+			<destination>{fe95956a-5e02-4848-a0cf-058417e95dfc}</destination>
+			<destination>{77641885-3e3e-4db6-9521-ac8e5dd0a761}</destination>
+			<destination>{5e618944-886a-41d0-96a0-a08198069cb1}</destination>
+			<destination>{4588ab2a-071d-4015-b568-407ac4472c7e}</destination>
+			<destination>{4dcd8475-dc77-49ec-a40f-f01cc6aac550}</destination>
+			<destination>{bdccd9d1-5ce9-49be-94c0-ba0a070cb181}</destination>
+			<destination>{33fbfe3e-0e7c-47e1-8aa2-f7a0e9f78857}</destination>
+			<destination>{0fc2fa3d-8018-4c63-93ae-377a27e014f5}</destination>
+			<destination>{bac8db8b-2092-43f1-9eb2-6f233db2d7a7}</destination>
+			<destination>{cf457cc2-8cc5-4b8a-a10b-3437fa75fb20}</destination>
+			<destination>{001a4c4c-ff56-427b-818c-e2fe66aa6bb4}</destination>
+			<destination>{d04b5409-a5d8-48c6-bd2b-4ed1630f88da}</destination>
+			<destination>{0561d714-637a-45af-bd52-33501f57b446}</destination>
+			<destination>{c993486d-84e1-468e-9f5a-d1b045016729}</destination>
+			<destination>{64ca6440-4faa-4d26-bdde-b75160430002}</destination>
+			<destination>{8b9f00f3-0328-4a96-8fa7-84477875d85a}</destination>
+			<destination>{ab60ec81-d8f9-4132-9036-9780d027a8ed}</destination>
+			<destination>{d6ff7340-ab69-44ca-97c8-39118d6593a1}</destination>
+			<destination>{bd5bac35-9143-4797-8e85-b42cd8ec2a6c}</destination>
+			<destination>{236a8681-4e37-498c-a1ea-c0e3819e7267}</destination>
+			<destination>{0e5da2a8-064a-46b3-8a8f-07f007eb3c91}</destination>
+			<destination>{e4a5d01c-e526-4acf-8985-7e898334379b}</destination>
+			<destination>{75d94e35-3d35-4fad-9f6e-4b742c6f9abc}</destination>
+			<destination>{464ee788-180f-4f79-910e-e052ea2c6fe3}</destination>
+			<destination>{a3dfabea-33e9-434d-9091-ec7d64f60cf5}</destination>
+		</relationship>
+	</object>
+	<object class="Tag" id="{2e193f8d-92b5-4f55-a7d7-fbd073e56354}">
+		<property name="name">
+			<value>ahdsr-modulator</value>
+		</property>
+	</object>
+	<object class="Tag" id="{b25c4f9d-1f47-4b94-89e1-8b05ecc39502}">
+		<property name="name">
+			<value>async</value>
+		</property>
+	</object>
+	<object class="Tag" id="{ff19646f-4dc8-43be-9d99-73cde9536edf}">
+		<property name="name">
+			<value>automation</value>
+		</property>
+	</object>
+	<object class="Tag" id="{1b2729a6-7abf-4220-9cbc-a415743f03d6}">
+		<property name="name">
+			<value>autopitch-modulator</value>
+		</property>
+	</object>
+	<object class="Tag" id="{c482be52-b48f-4e91-9a41-4429de5e55b3}">
+		<property name="name">
+			<value>built-in-parameter</value>
+		</property>
+	</object>
+	<object class="Tag" id="{106b1d43-b29e-4938-8809-4868fd036d2b}">
+		<property name="name">
+			<value>destination-marker</value>
+		</property>
+	</object>
+	<object class="Tag" id="{b621cb49-ebca-45dd-85fd-9af87c1d5a40}">
+		<property name="name">
+			<value>discrete-parameter</value>
+		</property>
+	</object>
+	<object class="Tag" id="{ad75f74d-248e-4b30-b41c-42bf6c059018}">
+		<property name="name">
+			<value>fade</value>
+		</property>
+	</object>
+	<object class="Tag" id="{a0007824-27a5-4949-ae54-4df20f35ea51}">
+		<property name="name">
+			<value>hold-value</value>
+		</property>
+	</object>
+	<object class="Tag" id="{ee45eecc-e25a-493b-bdcd-66a33f7336a5}">
+		<property name="name">
+			<value>initial-value</value>
+		</property>
+	</object>
+	<object class="Tag" id="{032932ee-4178-4241-a136-2450347dcb6e}">
+		<property name="name">
+			<value>labeled-parameter</value>
+		</property>
+	</object>
+	<object class="Tag" id="{721cf887-761f-4cf4-a1cf-2e8790901610}">
+		<property name="name">
+			<value>loop-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{95d562e5-0dc1-428c-9296-79fa91967a77}">
+		<property name="name">
+			<value>loop-region</value>
+		</property>
+	</object>
+	<object class="Tag" id="{fe95956a-5e02-4848-a0cf-058417e95dfc}">
+		<property name="name">
+			<value>multi-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{77641885-3e3e-4db6-9521-ac8e5dd0a761}">
+		<property name="name">
+			<value>one-shot</value>
+		</property>
+	</object>
+	<object class="Tag" id="{5e618944-886a-41d0-96a0-a08198069cb1}">
+		<property name="name">
+			<value>parameter</value>
+		</property>
+	</object>
+	<object class="Tag" id="{4588ab2a-071d-4015-b568-407ac4472c7e}">
+		<property name="name">
+			<value>parameter-condition</value>
+		</property>
+	</object>
+	<object class="Tag" id="{4dcd8475-dc77-49ec-a40f-f01cc6aac550}">
+		<property name="name">
+			<value>persistent</value>
+		</property>
+	</object>
+	<object class="Tag" id="{bdccd9d1-5ce9-49be-94c0-ba0a070cb181}">
+		<property name="name">
+			<value>programmer-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{33fbfe3e-0e7c-47e1-8aa2-f7a0e9f78857}">
+		<property name="name">
+			<value>quantization</value>
+		</property>
+	</object>
+	<object class="Tag" id="{0fc2fa3d-8018-4c63-93ae-377a27e014f5}">
+		<property name="name">
+			<value>random-modulator</value>
+		</property>
+	</object>
+	<object class="Tag" id="{bac8db8b-2092-43f1-9eb2-6f233db2d7a7}">
+		<property name="name">
+			<value>scatterer-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{cf457cc2-8cc5-4b8a-a10b-3437fa75fb20}">
+		<property name="name">
+			<value>seek-speed</value>
+		</property>
+	</object>
+	<object class="Tag" id="{001a4c4c-ff56-427b-818c-e2fe66aa6bb4}">
+		<property name="name">
+			<value>send</value>
+		</property>
+	</object>
+	<object class="Tag" id="{d04b5409-a5d8-48c6-bd2b-4ed1630f88da}">
+		<property name="name">
+			<value>sidechain-effect</value>
+		</property>
+	</object>
+	<object class="Tag" id="{0561d714-637a-45af-bd52-33501f57b446}">
+		<property name="name">
+			<value>sidechain-modulator</value>
+		</property>
+	</object>
+	<object class="Tag" id="{c993486d-84e1-468e-9f5a-d1b045016729}">
+		<property name="name">
+			<value>single-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{64ca6440-4faa-4d26-bdde-b75160430002}">
+		<property name="name">
+			<value>snapshot-instrument</value>
+		</property>
+	</object>
+	<object class="Tag" id="{8b9f00f3-0328-4a96-8fa7-84477875d85a}">
+		<property name="name">
+			<value>spatializer</value>
+		</property>
+	</object>
+	<object class="Tag" id="{ab60ec81-d8f9-4132-9036-9780d027a8ed}">
+		<property name="name">
+			<value>start-offset</value>
+		</property>
+	</object>
+	<object class="Tag" id="{d6ff7340-ab69-44ca-97c8-39118d6593a1}">
+		<property name="name">
+			<value>tempo-marker</value>
+		</property>
+	</object>
+	<object class="Tag" id="{bd5bac35-9143-4797-8e85-b42cd8ec2a6c}">
+		<property name="name">
+			<value>track-colors</value>
+		</property>
+	</object>
+	<object class="Tag" id="{236a8681-4e37-498c-a1ea-c0e3819e7267}">
+		<property name="name">
+			<value>track-routing</value>
+		</property>
+	</object>
+	<object class="Tag" id="{0e5da2a8-064a-46b3-8a8f-07f007eb3c91}">
+		<property name="name">
+			<value>transition-region</value>
+		</property>
+	</object>
+	<object class="Tag" id="{e4a5d01c-e526-4acf-8985-7e898334379b}">
+		<property name="name">
+			<value>transition-timeline</value>
+		</property>
+	</object>
+	<object class="Tag" id="{75d94e35-3d35-4fad-9f6e-4b742c6f9abc}">
+		<property name="name">
+			<value>Music</value>
+		</property>
+	</object>
+	<object class="Tag" id="{464ee788-180f-4f79-910e-e052ea2c6fe3}">
+		<property name="name">
+			<value>Area</value>
+		</property>
+	</object>
+	<object class="Tag" id="{a3dfabea-33e9-434d-9091-ec7d64f60cf5}">
+		<property name="name">
+			<value>Battle</value>
+		</property>
+	</object>
+</objects>

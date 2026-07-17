@@ -1,0 +1,4 @@
+example.ttf is the Newsreader typeface (https://fonts.google.com/specimen/Newsreader), licensed under the SIL Open Font License 1.1 (https://openfontlicense.org).
+
+It is included as a reference for the fonts build pipeline: a <name>.ttf next to a <name>.json config gets baked into the atlas page the config names.
+The game's actual fonts are shipped prebaked (the .qoi/.index pairs in this folder) in this public repo for licensing reasons.

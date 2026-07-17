@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="ParameterPreset" id="{526c6702-0e34-4436-a26c-ddc91f986263}">
+		<property name="name">
+			<value>battleSkipIntro</value>
+		</property>
+		<relationship name="folder">
+			<destination>{b4edcb53-1604-42ad-a1d1-f9c561897cbf}</destination>
+		</relationship>
+		<relationship name="parameter">
+			<destination>{836f2fe5-8cf2-4681-83b0-080dfea89eae}</destination>
+		</relationship>
+	</object>
+	<object class="GameParameter" id="{836f2fe5-8cf2-4681-83b0-080dfea89eae}">
+		<property name="parameterType">
+			<value>1</value>
+		</property>
+		<property name="maximum">
+			<value>2</value>
+		</property>
+		<property name="initialValue">
+			<value>0</value>
+		</property>
+	</object>
+</objects>

@@ -1,0 +1,46 @@
+##local dependencies (installed by src/_tools/install.ps1)
+/.deps
+
+##build dirs
+/build
+
+##odin build/dev tools
+src/_tools/build_tools/massimodin_builder.exe
+src/_tools/build_tools/massimodin_builder.pdb
+src/_tools/dev_tools/timer_app/timer_app.exe
+src/_tools/dev_tools/timer_app/timer_app.pdb
+src/_tools/build_tools/dialogue_builder.exe
+src/_tools/build_tools/dialogue_builder.pdb
+
+##generated code
+*.g.odin
+
+##vscode files
+.vscode/*
+!.vscode/launch.json
+*.code-workspace
+ols.json
+/.VSCodeCounter
+
+##fmod files
+*.bank
+*.bank.meta
+*.cache
+*.unsaved
+*.user
+*.backup
+*.backup1
+*.backup2
+*.backup3
+*.fspro.backup*
+fmod_editor.log
+*.fspro.lock
+!*.fspro
+
+##imgui cache
+imgui.ini
+
+##obsidian vault files
+**/.obsidian/workspace.json
+**/.obsidian/hotkeys.json
+dialogues/portraits

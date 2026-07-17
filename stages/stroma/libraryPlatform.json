@@ -1,0 +1,3984 @@
+{
+  "backgroundColor": [
+    0.0000000000000000,
+    0.0000000000000000,
+    0.0000000000000000
+  ],
+  "bounds": {
+    "pos": [
+      0.0000000000000000,
+      0.0000000000000000
+    ],
+    "size": [
+      958.0000000000000000,
+      602.0000000000000000
+    ]
+  },
+  "collisionMesh": {
+    "edges": "AAABAAEAAgACAAMAAwAEAAQABQAFAAYABgAHAAcACAAIAAkACQAKAAoACwALAAwADAANAA0ADgAOAA8ADwAQABAAEQARABIAEgATABMAFAAUABUAFQAWABYAFwApACYAJgAYABkAGgAXACQAJAAbABsAHAAcAB0AHgAfAB8AIAAgACEAIQAiACIAIwAnACgAKAApACcAKwArACoA",
+    "vertices": "AABvRAAAgkMAAEBEAACyQwAAGkQAALJDAAAaRAAA0EMAADFEAADQQwAAMUQAAORDAAAoRAAA7kMAABtEAADuQwAAG0QAAPRDAAA1RAAAB0QAAFVEAAAHRGYmcERm5gZEZiZwRM0MDkQAAENEAAAORAAAKUQAAA5EAAAHRAAA+EMAAAdEAADuQwAA9EMAAO5DAADeQwAA5EMAAN5DAADQQwAAB0QAANBDAAAHRAAAskMAAKpDAACyQwAAfEMAAJxDAABvRAAAgEMAAKxDAABkQwAAxEMAAExDAACSQwAAeEMAAJJDAABkQwAArEMAAGRDAADEQwAATEMAAAFEAABMQwAAAUQAACxDSlIYRHDbN0MAABhEAABIQwAAIUQAAEhDAAB8QwAAeEMAACFEAABIQwAAb0QAAExDAABCRAAAZEMAAFlEAABkQwAAZUQAAExDAAAhRAAASEMAADBEAABcQw=="
+  },
+  "defaultFootstepSurface": "wood",
+  "entities": [
+    {
+      "id": "60c6c832-57f4-43ce-a336-782a68cce4fe",
+      "requiredComponents": [
+        {
+          "name": "warp",
+          "targetPos": [
+            216.0000000000000000,
+            434.0000000000000000
+          ],
+          "targetStage": "library"
+        },
+        {
+          "debugVisibleOnly": false,
+          "group": "triggers",
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              513.0000000000000000,
+              170.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            6.2500000000000000,
+            0.9375000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "4d3f1ee9-6134-49b7-a323-456cd639c394",
+      "requiredComponents": [
+        {
+          "name": "warp",
+          "targetPos": [
+            32.0000000000000000,
+            144.0000000000000000
+          ],
+          "targetStage": "MainTrunk"
+        },
+        {
+          "debugVisibleOnly": false,
+          "group": "triggers",
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              944.0000000000000000,
+              192.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            1.0000000000000000,
+            4.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9591426e-aa79-4771-9501-0d9d83ffb570",
+      "requiredComponents": [
+        {
+          "name": "warp",
+          "targetPos": [
+            32.0000000000000000,
+            944.0000000000000000
+          ],
+          "targetStage": "upperPlatform"
+        },
+        {
+          "debugVisibleOnly": false,
+          "group": "triggers",
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              939.0000000000000000,
+              530.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            1.1875000000000000,
+            3.5000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -50.0000000000000000,
+          "beamWidth": 32.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            192.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              243.0000000000000000,
+              368.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "c86f79ef_8d17_4453_a2a5_498156efa87c",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              786.0000000000000000,
+              385.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "bc98ce9b_125b_4b64_a65e_d72339eb6293",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "floor",
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              666.0000000000000000,
+              434.0000000000000000
+            ],
+            "z": -1.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6dbbad4f_68c2_4cf2_be37_2c4c003ad8a7",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail03",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              745.0000000000000000,
+              479.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "4f3fd4ab_4729_43d5_9829_354dbc3d985f",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail04",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              610.0000000000000000,
+              601.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "db5597c7_9c1f_4665_b045_a5d3eeb8c0ee",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "floor",
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail05",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              489.0000000000000000,
+              434.0000000000000000
+            ],
+            "z": -1.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "045fbdc4_8bea_4734_8f66_37a443005867",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail06",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              392.0000000000000000,
+              409.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1efd7967_6b48_430d_ac60_275dcb3b0722",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "floor",
+          "group": "railing",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorRail07",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              323.0000000000000000,
+              290.0000000000000000
+            ],
+            "z": -1.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9d23a2af_5af9_44f4_9a27_d89ab4bfea6e",
+      "requiredComponents": [
+        {
+          "maskSprite": "benchLong",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            5.5000000000000000
+          ],
+          "dropShadowRadii": [
+            35.0000000000000000,
+            4.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "benchLong",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              817.0000000000000000,
+              227.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "cce90fea_0150_47d6_8898_96717876ca9d",
+      "requiredComponents": [
+        {
+          "maskSprite": "planterEmpty02",
+          "name": "stageInteractable"
+        },
+        {
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "planterEmpty02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              833.0000000000000000,
+              318.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "49708030_8354_461c_a4d9_f74862002a3f",
+      "requiredComponents": [
+        {
+          "maskSprite": "lampPost",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -2.0000000000000000
+          ],
+          "dropShadowRadii": [
+            22.0000000000000000,
+            4.0000000000000000
+          ],
+          "group": "lamp",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "lampPost",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              764.0000000000000000,
+              236.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "74a538d5_fe7c_40c1_b0f2_3053f324959c",
+      "requiredComponents": [
+        {
+          "maskSprite": "pottedPlantLarge02",
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "precise",
+          "group": "potted plant",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "pottedPlantLarge02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              725.0000000000000000,
+              224.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1e3b16a8_f792_421b_83f2_ab8b1ff11171",
+      "requiredComponents": [
+        {
+          "maskSprite": "pottedPlantLarge07",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowAngle": 25.0000000000000000,
+          "dropShadowOffset": [
+            1.0000000000000000,
+            -12.0000000000000000
+          ],
+          "dropShadowRadii": [
+            24.0000000000000000,
+            11.5000000000000000
+          ],
+          "group": "potted plant",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "pottedPlantLarge07",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              663.0000000000000000,
+              214.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6974b74c_914a_4bcc_a726_7702372acf95",
+      "requiredComponents": [
+        {
+          "maskSprite": "pottedPlantLarge06",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowAngle": 30.0000000000000000,
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -13.0000000000000000
+          ],
+          "dropShadowRadii": [
+            21.5000000000000000,
+            11.5000000000000000
+          ],
+          "group": "potted plant",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "pottedPlantLarge06",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              461.0000000000000000,
+              204.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b9ecda94_f90a_46c1_8cdd_5b443b7054f1",
+      "requiredComponents": [
+        {
+          "maskSprite": "pottedPlant03",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -1.0000000000000000
+          ],
+          "dropShadowRadii": [
+            9.0000000000000000,
+            5.0000000000000000
+          ],
+          "group": "potted plant",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "pottedPlant03",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              409.0000000000000000,
+              215.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6a3cc01c_4174_4965_a17e_5a500587800c",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "lamp",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "mainTrunkLargeLantern",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              430.0000000000000000,
+              239.0000000000000000
+            ],
+            "z": -46.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "3c2257ac_5587_4a62_88be_45bb98268444",
+      "requiredComponents": [
+        {
+          "maskSprite": "grainSack02",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            -1.0000000000000000,
+            -8.0000000000000000
+          ],
+          "dropShadowRadii": [
+            17.0000000000000000,
+            8.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "grainSack02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              390.0000000000000000,
+              229.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "744abe18_e194_49bc_a146_d4295e734d7c",
+      "requiredComponents": [
+        {
+          "maskSprite": "itemDisplayRack02",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            -2.0000000000000000,
+            -2.0000000000000000
+          ],
+          "dropShadowRadii": [
+            43.0000000000000000,
+            3.0000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "itemDisplayRack02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              299.0000000000000000,
+              261.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8c992580_ca2d_41cf_bd7a_2be027bb3c2e",
+      "requiredComponents": [
+        {
+          "maskSprite": "barrel01",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -3.0000000000000000
+          ],
+          "dropShadowRadii": [
+            11.5000000000000000,
+            9.0000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "barrel01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              316.0000000000000000,
+              277.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "181bc668_ab8f_48fb_8b1c_6baa8c9277d2",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              578.0000000000000000,
+              78.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "2ab63c02_c38d_4ba1_9b81_88de7a3f96be",
+      "requiredComponents": [
+        {
+          "maskSprite": "grainBag",
+          "name": "stageInteractable"
+        },
+        {
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "grainBag",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              295.0000000000000000,
+              275.0000000000000000
+            ],
+            "z": -3.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "760d5d1b_81b9_427f_84fa_f3a68b6d609f",
+      "requiredComponents": [
+        {
+          "maskSprite": "stoolRound",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            8.0000000000000000
+          ],
+          "dropShadowRadii": [
+            8.5000000000000000,
+            6.0000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "stoolRound",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              274.0000000000000000,
+              263.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "84a48cb7_f3cc_4e95_9648_b2f3e0bce869",
+      "requiredComponents": [
+        {
+          "maskNoSpriteSize": [
+            111.0000000000000000,
+            1.0000000000000000
+          ],
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            -0.5000000000000000,
+            -0.5000000000000000
+          ],
+          "dropShadowRadii": [
+            55.5000000000000000,
+            1.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "ivyTrellis04",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              664.0000000000000000,
+              301.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "56aa3b69_4d99_455d_8754_cc92175be3b9",
+      "requiredComponents": [
+        {
+          "maskNoSpriteSize": [
+            111.0000000000000000,
+            1.0000000000000000
+          ],
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            -0.5000000000000000,
+            -0.5000000000000000
+          ],
+          "dropShadowRadii": [
+            55.5000000000000000,
+            1.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "ivyTrellis04",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              448.0000000000000000,
+              301.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "772f2be4_811d_4224_86fd_6c0710303c1f",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              511.0000000000000000,
+              96.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "7a262aed_a05f_4849_adf0_bb926c3b6a8a",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "animated",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "pinwheelYellow",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              241.0000000000000000,
+              290.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "bc6dc700_74b6_4382_80ca_5a4b065ec557",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              323.0000000000000000,
+              14.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "a0ebc123_5d00_42ab_82b8_f5ac3874dff1",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              258.0000000000000000,
+              55.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "80d9cadb_4ebe_44ef_b8fd_101e85fc70d0",
+      "requiredComponents": [
+        {
+          "maskSprite": "benchBacked",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -6.5000000000000000
+          ],
+          "dropShadowRadii": [
+            26.0000000000000000,
+            7.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "benchBacked",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              493.0000000000000000,
+              433.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d244439e_cdf7_4c17_8dc1_6a34de298295",
+      "requiredComponents": [
+        {
+          "maskSprite": "lampPost",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -2.0000000000000000
+          ],
+          "dropShadowRadii": [
+            22.0000000000000000,
+            4.0000000000000000
+          ],
+          "group": "lamp",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "lampPost",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              454.0000000000000000,
+              429.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d8dd7d7d_cbd1_4049_927a_fd73a2e723dd",
+      "requiredComponents": [
+        {
+          "maskSprite": "crateLong01",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            15.0000000000000000,
+            -9.0000000000000000
+          ],
+          "dropShadowRadii": [
+            38.0000000000000000,
+            12.0000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "crateLong01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              650.0000000000000000,
+              431.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d7020e00_870b_4bd0_ad68_f2f647605a0a",
+      "requiredComponents": [
+        {
+          "maskSprite": "crate01",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -13.5000000000000000
+          ],
+          "dropShadowRadii": [
+            11.0000000000000000,
+            14.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "crate01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              692.0000000000000000,
+              431.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "e093c34f_76c3_4498_acf3_0ca51f93c7c4",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            24.0000000000000000,
+            0.0000000000000000
+          ],
+          "dropShadowRadii": [
+            24.0000000000000000,
+            0.0000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "crateLong01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              669.0000000000000000,
+              432.0000000000000000
+            ],
+            "z": -15.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "f557b094_e43d_4996_bf74_2cc2cf2fe23c",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              687.0000000000000000,
+              47.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b55ce5ff_7f41_4a03_a433_fb59e737a66a",
+      "requiredComponents": [
+        {
+          "maskSprite": "lampPost",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -2.0000000000000000
+          ],
+          "dropShadowRadii": [
+            22.0000000000000000,
+            4.0000000000000000
+          ],
+          "group": "lamp",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "lampPost",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              915.0000000000000000,
+              535.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8746e534_2d56_4908_9a2b_4a79c0d4b29a",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              562.0000000000000000,
+              72.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "208bdba5_ad8b_4e31_b530_fc248061035c",
+      "requiredComponents": [
+        {
+          "clusterGens": [
+            {
+              "growOffset": [
+                0.0000000000000000,
+                -20.2666931199999993
+              ],
+              "pos": [
+                9.7999877899999994,
+                -25.5333252000000002
+              ],
+              "radii": [
+                56.0000000000000000,
+                43.7333679199999992
+              ]
+            },
+            {
+              "growOffset": [
+                2.1666259800000001,
+                -25.8333129899999996
+              ],
+              "pos": [
+                -33.3333129900000031,
+                -2.1666870100000000
+              ],
+              "radii": [
+                51.5000000000000000,
+                41.3333435099999988
+              ]
+            }
+          ],
+          "name": "blobFoliage"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              935.0000000000000000,
+              486.0000000000000000
+            ],
+            "z": -75.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "65d8b3ae_c571_4215_9ff9_050ebd1ffb34",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "animated",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "pinwheelRed",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              911.0000000000000000,
+              408.0000000000000000
+            ],
+            "z": -130.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "a5a6c8cf_c283_430f_9de5_9adcaf7ac16c",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              632.0000000000000000,
+              81.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6a3cc01c_4174_4965_a17e_5a500587800c",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "lamp",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "mainTrunkLargeLantern",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              720.0000000000000000,
+              157.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "959a8685_effd_4ce2_a75c_0896352033f9",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "animated",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "bannerPole",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              388.0000000000000000,
+              472.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8f265aab_2d79_4485_837c_95c0f5328da0",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "animated",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "receivesVerticalShadow": false
+        },
+        {
+          "mySprite": "env_stroma_bannerStraight",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              388.0000000000000000,
+              474.0000000000000000
+            ],
+            "z": -87.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1ed18c74_3247_41b1_8d3b_d40425919da3",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__8",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              904.0000000000000000,
+              166.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "507af457_f9bd_4173_af43_8d275afda80d",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              903.0000000000000000,
+              252.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "27cfb175_30eb_4840_9358_5c0d7ed31622",
+      "requiredComponents": [
+        {
+          "maskNoSpriteSize": [
+            138.0000000000000000,
+            1.0000000000000000
+          ],
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "prosNeighborhoodBranch02b",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              862.0000000000000000,
+              75.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1ed18c74_3247_41b1_8d3b_d40425919da3",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__8",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              912.0000000000000000,
+              193.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "daee08fa_8658_40d9_82c8_56f9a596bb22",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "sidePlatformBranch01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              202.0000000000000000,
+              288.0000000000000000
+            ],
+            "z": 8.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "7ac60d37_739d_4bf7_9341_78ec362f8c35",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorBranch02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              634.0000000000000000,
+              88.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "066b9a73_0fb5_4b25_a224_25b55fd90042",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              154.0000000000000000,
+              71.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "a64aeb94_691f_46e7_8443_def97445d566",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorBranch04",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              301.0000000000000000,
+              246.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "ebd17a74_7ee6_4806_afe2_10a34dbb90e8",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "depthKind": "floor",
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorWires",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              694.0000000000000000,
+              203.0000000000000000
+            ],
+            "z": -1.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "dbaecaed_ab6f_4cfd_8020_a51527b4723d",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "libraryExteriorBranch01",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              358.0000000000000000,
+              545.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "4c3212c5_a9d0_4741_a9f0_013c73f22b02",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "group": "potted plant",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "pottedPlant07",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              662.0000000000000000,
+              433.0000000000000000
+            ],
+            "z": -34.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "dfeff474_f585_4bd1_9693_39ec07b7d5eb",
+      "requiredComponents": [
+        {
+          "maskSprite": "benchShort",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowOffset": [
+            0.5000000000000000,
+            6.5000000000000000
+          ],
+          "dropShadowRadii": [
+            9.5000000000000000,
+            4.5000000000000000
+          ],
+          "group": "deco",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowRect"
+        },
+        {
+          "mySprite": "benchShort",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              673.0000000000000000,
+              440.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1f998ba2_2974_41b2_974d_82512596d6dc",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "componentsVisible": false,
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "receivesVerticalShadow": false
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              290.0000000000000000,
+              748.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "4a0de8af_4b2a_4b7d_b6bf_feeedf7f4e4d",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "componentsVisible": false,
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "receivesVerticalShadow": false
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              872.0000000000000000,
+              745.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "74ef1447_1317_4a90_9e7c_7872c8a1995c",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "componentsVisible": false,
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "receivesVerticalShadow": false
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              368.0000000000000000,
+              277.0000000000000000
+            ],
+            "z": -71.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "1d10cf5b_8c2e_4ed8_b3ea_77c6832a1dcc",
+      "requiredComponents": [
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "componentsVisible": false,
+          "group": "foliage",
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "receivesVerticalShadow": false
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              953.0000000000000000,
+              426.0000000000000000
+            ],
+            "z": -200.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -100.0000000000000000,
+          "beamWidth": 84.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              511.0000000000000000,
+              300.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -100.0000000000000000,
+          "beamWidth": 102.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              681.0000000000000000,
+              300.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -50.0000000000000000,
+          "beamWidth": 12.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              421.0000000000000000,
+              294.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -50.0000000000000000,
+          "beamWidth": 84.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              364.0000000000000000,
+              283.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamEndOffset": -150.0000000000000000,
+          "beamFadeOutStartOffset": -250.0000000000000000,
+          "beamWidth": 12.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "irisBush67x40_02",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              318.0000000000000000,
+              515.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -100.0000000000000000,
+          "beamWidth": 32.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            192.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              771.0000000000000000,
+              315.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamEndOffset": -20.0000000000000000,
+          "beamFadeOutStartOffset": -100.0000000000000000,
+          "beamOffset": [
+            6.0000000000000000,
+            0.0000000000000000
+          ],
+          "beamWidth": 12.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              568.0000000000000000,
+              307.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamFadeOutStartOffset": -100.0000000000000000,
+          "beamWidth": 102.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -400.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage__9",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              163.0000000000000000,
+              362.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4162ed2_43c7_40af_9907_55f4e11ed2fd",
+      "requiredComponents": [
+        {
+          "beamEndOffset": -150.0000000000000000,
+          "beamFadeOutStartOffset": -250.0000000000000000,
+          "beamWidth": 24.0000000000000000,
+          "name": "godRay",
+          "sourcePoint": [
+            200.0000000000000000,
+            -450.0000000000000000
+          ]
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "irisBush70x54",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              348.0000000000000000,
+              511.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8a3123e6_c6e5_4965_b631_6e6e40332344",
+      "requiredComponents": [
+        {
+          "clusterGens": [
+            {
+              "growOffset": [
+                14.2222290000000005,
+                -40.0000000000000000
+              ],
+              "pos": [
+                -39.5555725099999975,
+                -138.5555419899999947
+              ],
+              "radii": [
+                122.6666717500000061,
+                100.4444580100000053
+              ]
+            },
+            {
+              "growOffset": [
+                7.1111145000000002,
+                -15.1111450200000004
+              ],
+              "pos": [
+                65.3333129899999960,
+                -82.5555419899999947
+              ],
+              "radii": [
+                115.5555725100000046,
+                99.5556030300000003
+              ]
+            },
+            {
+              "growOffset": [
+                35.5555572499999997,
+                -50.6666870099999969
+              ],
+              "pos": [
+                -153.3333587600000101,
+                -65.6666870100000040
+              ],
+              "radii": [
+                140.4444274900000096,
+                113.7777710000000013
+              ]
+            },
+            {
+              "growOffset": [
+                -11.5555725099999993,
+                -48.0000000000000000
+              ],
+              "pos": [
+                188.8888549799999907,
+                -61.2222289999999987
+              ],
+              "radii": [
+                96.0000000000000000,
+                78.2222289999999987
+              ]
+            }
+          ],
+          "name": "blobFoliage"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              250.0000000000000000,
+              700.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "726fdedf_a5ef_4af0_bd20_cd158d46e0d3",
+      "requiredComponents": [
+        {
+          "clusterGens": [
+            {
+              "growOffset": [
+                -0.0000000000000000,
+                -8.0000000000000000
+              ],
+              "pos": [
+                -12.1110839800000001,
+                -35.3333129900000031
+              ],
+              "radii": [
+                96.0000000000000000,
+                90.2222289999999987
+              ]
+            },
+            {
+              "growOffset": [
+                -0.0000000000000000,
+                -8.0000000000000000
+              ],
+              "pos": [
+                -110.6666259800000063,
+                8.8095703099999998
+              ],
+              "radii": [
+                96.0000000000000000,
+                108.0476684599999970
+              ]
+            }
+          ],
+          "name": "blobFoliage"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              978.0000000000000000,
+              652.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "208bdba5_ad8b_4e31_b530_fc248061035c",
+      "requiredComponents": [
+        {
+          "clusterGens": [
+            {
+              "growOffset": [
+                -10.6666259799999992,
+                -20.7999877899999994
+              ],
+              "pos": [
+                -157.8666992199999868,
+                -269.6666870099999755
+              ],
+              "radii": [
+                107.7333373999999964,
+                82.6666870100000040
+              ]
+            },
+            {
+              "growOffset": [
+                -10.1333007800000008,
+                -13.3333435100000006
+              ],
+              "pos": [
+                -100.0000000000000000,
+                -341.2222290000000271
+              ],
+              "radii": [
+                96.4444580100000053,
+                66.6666564899999941
+              ]
+            },
+            {
+              "growOffset": [
+                24.0000000000000000,
+                -25.0666503899999995
+              ],
+              "pos": [
+                -32.8889160200000035,
+                -269.2222290000000271
+              ],
+              "radii": [
+                84.7999877900000030,
+                84.2666626000000036
+              ]
+            },
+            {
+              "growOffset": [
+                45.3332519499999975,
+                -15.4666747999999998
+              ],
+              "pos": [
+                -4.0000000000000000,
+                -370.1111144999999851
+              ],
+              "radii": [
+                74.6666870100000040,
+                77.2666626000000036
+              ]
+            }
+          ],
+          "name": "blobFoliage"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              970.0000000000000000,
+              386.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d8114c92_6f72_418f_ab07_6436c40f05db",
+      "requiredComponents": [
+        {
+          "clusterGens": [
+            {
+              "growOffset": [
+                18.6666717499999990,
+                -12.8000030500000008
+              ],
+              "pos": [
+                -67.6666717500000061,
+                -159.2666625999999894
+              ],
+              "radii": [
+                69.3333282499999939,
+                67.1999969499999992
+              ]
+            },
+            {
+              "growOffset": [
+                0.0000000000000000,
+                -8.0000000000000000
+              ],
+              "pos": [
+                35.3999938999999983,
+                -160.1999969500000134
+              ],
+              "radii": [
+                80.1333312999999947,
+                54.9333343500000026
+              ]
+            },
+            {
+              "growOffset": [
+                -35.5555572499999997,
+                -28.8888855000000007
+              ],
+              "pos": [
+                -35.6666793799999979,
+                -93.2222289999999987
+              ],
+              "radii": [
+                120.8444518999999957,
+                89.7777710000000013
+              ]
+            },
+            {
+              "growOffset": [
+                38.3999938999999983,
+                -22.9333343499999991
+              ],
+              "pos": [
+                25.3999938999999983,
+                -208.0000000000000000
+              ],
+              "radii": [
+                96.0000000000000000,
+                79.2666626000000036
+              ]
+            },
+            {
+              "growOffset": [
+                -5.8666687000000000,
+                -40.0000000000000000
+              ],
+              "pos": [
+                143.2666625999999894,
+                -200.0000000000000000
+              ],
+              "radii": [
+                98.6666564899999941,
+                87.4666595500000028
+              ]
+            },
+            {
+              "growOffset": [
+                -9.6000060999999999,
+                -34.1333160399999969
+              ],
+              "pos": [
+                270.0000000000000000,
+                -200.9333343499999955
+              ],
+              "radii": [
+                96.0000000000000000,
+                96.0000000000000000
+              ]
+            },
+            {
+              "growOffset": [
+                -11.2000122100000006,
+                -38.3999938999999983
+              ],
+              "pos": [
+                215.3333435099999917,
+                -301.0666503900000066
+              ],
+              "radii": [
+                96.0000000000000000,
+                96.0000000000000000
+              ]
+            },
+            {
+              "growOffset": [
+                -3.7333373999999999,
+                -29.8666687000000017
+              ],
+              "pos": [
+                360.3333435100000202,
+                -220.9333343499999955
+              ],
+              "radii": [
+                77.8666687000000053,
+                81.5999908400000038
+              ]
+            },
+            {
+              "growOffset": [
+                -0.0000000000000000,
+                -8.0000000000000000
+              ],
+              "pos": [
+                346.0000000000000000,
+                -329.2666626000000178
+              ],
+              "radii": [
+                87.4667053200000026,
+                79.8666687000000053
+              ]
+            },
+            {
+              "growOffset": [
+                -30.9333496100000005,
+                -49.6000061000000017
+              ],
+              "pos": [
+                404.7333373999999822,
+                -282.8666686999999911
+              ],
+              "radii": [
+                96.0000000000000000,
+                96.0000000000000000
+              ]
+            },
+            {
+              "growOffset": [
+                10.4000244100000003,
+                -19.0000000000000000
+              ],
+              "pos": [
+                477.7999877899999888,
+                -241.2666625999999894
+              ],
+              "radii": [
+                106.6666870100000040,
+                71.4666595500000028
+              ]
+            }
+          ],
+          "name": "blobFoliage"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "blobFoliage",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              150.0000000000000000,
+              289.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8c7b0f98_67a0_4d17_a5ba_efe4f2d92144",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              682.0000000000000000,
+              80.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "eac9c8fd_a9ae_430a_b8a3_43643412a050",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              586.0000000000000000,
+              62.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "7cd8a9ca_65de_4569_b763_c555749d4e2e",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              450.0000000000000000,
+              90.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b4001abf_8830_458a_8098_c7849a511b69",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              468.0000000000000000,
+              104.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9436fdb5_a140_47e6_8c62_b5f33f709b60",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              382.0000000000000000,
+              132.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "a10db605_7d7a_4296_b66a_a96a8653de89",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              316.0000000000000000,
+              134.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6e97d311_b5cf_4ff7_bcea_ab06fc7d6c30",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              205.0000000000000000,
+              155.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8bf4d4c8_a1d0_4451_85e1_59eb14ef5b00",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              145.0000000000000000,
+              243.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "6f682ad9_d56a_4303_84c2_239077b916df",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              950.0000000000000000,
+              583.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "88320937_c260_49aa_bbb9_b2c55c3ba2b4",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              851.0000000000000000,
+              618.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "c20c9d2e_e86e_4470_8b5c_27a607a64433",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              769.0000000000000000,
+              233.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b2c93c51_2f72_4e40_a6c6_3bf9eae34cc0",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              847.0000000000000000,
+              292.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "8027feba_6830_4ddc_92cf_c5c40b04bf37",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              835.0000000000000000,
+              225.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "507af457_f9bd_4173_af43_8d275afda80d",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              887.0000000000000000,
+              252.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d34d43b8_d629_493e_93cc_90b9563eba25",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              842.0000000000000000,
+              170.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "ca44a39f_3ac3_421b_9258_1cd1d09cc9e0",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              926.0000000000000000,
+              217.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "63a5f3c3_1044_4c4a_bf70_19c31b031d37",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              784.0000000000000000,
+              176.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "087c4fb8_6e29_4507_9896_3b7695df945a",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              832.0000000000000000,
+              126.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "d285aae8_8697_4a6b_bb11_1cb388c4b571",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              902.0000000000000000,
+              68.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "9369af83_94cd_4750_bc2b_a7eb4d244659",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              673.0000000000000000,
+              20.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "359af515_b6b5_4f05_b600_d9a940c7b3d5",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              262.0000000000000000,
+              125.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "3b424481_ced2_4e44_9a4c_379456f71d5d",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              123.0000000000000000,
+              92.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "4e9de4ae_f81a_4598_80a5_b4b06d64a88d",
+      "requiredComponents": [
+        {
+          "maskNoSpriteSize": [
+            138.0000000000000000,
+            1.0000000000000000
+          ],
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "prosNeighborhoodBranch02b",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              961.0000000000000000,
+              434.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "b2c93c51_2f72_4e40_a6c6_3bf9eae34cc0",
+      "requiredComponents": [
+        {
+          "group": "shadows",
+          "name": "stageEntity",
+          "shadowKind": "isShadow"
+        },
+        {
+          "mySprite": "blobFoliage__10",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              923.0000000000000000,
+              414.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "f58a9d2c_c2ce_42e6_9821_c3b26da1000a",
+      "requiredComponents": [
+        {
+          "interactDialogue": "stromaVillage",
+          "interactDialogueLabel": "pinwheel",
+          "maskSprite": "interactableMask",
+          "name": "stageInteractable",
+          "solid": false
+        },
+        {
+          "debugVisibleOnly": true,
+          "name": "stageEntity",
+          "resizable": true
+        },
+        {
+          "mySprite": "interactableMask",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              234.0000000000000000,
+              290.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            1.1875000000000000,
+            1.9375000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "48a0758e_b594_49aa_a139_99c420ffdae5",
+      "requiredComponents": [
+        {
+          "interactDialogue": "stromaVillage",
+          "interactDialogueLabel": "pinwheel",
+          "maskSprite": "interactableMask",
+          "name": "stageInteractable",
+          "solid": false
+        },
+        {
+          "debugVisibleOnly": true,
+          "name": "stageEntity",
+          "resizable": true
+        },
+        {
+          "mySprite": "interactableMask",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              896.0000000000000000,
+              279.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            1.8750000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "47a37a01_d5d0_4a68_997a_c4ad2825b16b",
+      "requiredComponents": [
+        {
+          "autoDestroy": false,
+          "dialogueID": "stromaVillage",
+          "dialogueLabel": "edif",
+          "disableFlag": "sprinklerCutsceneDone",
+          "name": "trigger"
+        },
+        {
+          "name": "stageEntity"
+        },
+        {
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              851.0000000000000000,
+              219.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            1.0000000000000000,
+            5.8125000000000000
+          ]
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "ac4146be_390c_4424_b8f0_696a0b9b9751",
+      "requiredComponents": [
+        {
+          "facing": "left",
+          "initID": "edif",
+          "name": "stageCharacter"
+        },
+        {
+          "name": "mover"
+        },
+        {
+          "coords": {
+            "pos": [
+              883.0000000000000000,
+              263.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform",
+          "scale": [
+            -1.0000000000000000,
+            1.0000000000000000
+          ]
+        },
+        {
+          "mySprite": "edif_overworld_idle_side",
+          "name": "spriter"
+        },
+        {
+          "name": "collider"
+        },
+        {
+          "dropShadowRadii": [
+            11.5000000000000000,
+            3.0000000000000000
+          ],
+          "name": "stageEntity"
+        },
+        {
+          "name": "stageInteractable"
+        },
+        {
+          "initID": "minima",
+          "name": "combatUnit"
+        },
+        {
+          "name": "combatEntity"
+        },
+        {
+          "name": "audioEmitter"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "f3b2750d_0a6d_4fb4_8dde_56561145ff1c",
+      "requiredComponents": [
+        {
+          "maskSprite": "rake",
+          "name": "stageInteractable"
+        },
+        {
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity"
+        },
+        {
+          "mySprite": "rake",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              252.0000000000000000,
+              266.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    },
+    {
+      "id": "5f7b9b35_7c2e_4b6d_a936_8567bc0c62ba",
+      "requiredComponents": [
+        {
+          "maskSprite": "rake",
+          "name": "stageInteractable"
+        },
+        {
+          "dropShadowAngle": 10.0000000000000000,
+          "dropShadowOffset": [
+            0.0000000000000000,
+            -3.0000000000000000
+          ],
+          "dropShadowRadii": [
+            12.5000000000000000,
+            -3.0000000000000000
+          ],
+          "identifyingComponentIndex": 2.0000000000000000,
+          "name": "stageEntity",
+          "shadowKind": "dropShadowEllipse"
+        },
+        {
+          "mySprite": "rake",
+          "name": "spriter"
+        },
+        {
+          "coords": {
+            "pos": [
+              359.0000000000000000,
+              230.0000000000000000
+            ],
+            "z": 0.0000000000000000
+          },
+          "name": "transform"
+        },
+        {
+          "name": "collider"
+        }
+      ],
+      "uniqueComponents": [
+
+      ]
+    }
+  ],
+  "footstepSurfaceOverrides": [
+    {
+      "mesh": {
+        "edges": "AAABAAEAAgACAAMAAwAEAAQABQAFAAYABgAHAAcACAAIAAkACQAKAAoACwALAAwADAANAA0ADgAOAAAA",
+        "vertices": "MzPSQwAAUUOameJDmplxQ2Zm9UOamX9DZuYGRM3Mg0MzMx1EMzOCQ81MJ0QzM3tDMzMtRM3MaEMAADBEzcxEQwCAQkQzM15DzUxBRGbmjEMzMzNEzUyaQzMzwkNm5plDVlWmQwAAjUMAwKZDAMBfQwBgykMAgD1D"
+      },
+      "surface": "grass"
+    }
+  ],
+  "format_version": "11",
+  "indoors": false,
+  "layers": [
+    {
+      "blendData": {
+        "alpha": 0.0000000000000000,
+        "blendmode": "none",
+        "color": [
+          0.0000000000000000,
+          0.0000000000000000,
+          0.0000000000000000
+        ]
+      },
+      "depthKind": "foreground",
+      "multicolor": true,
+      "name": "foregroundTint",
+      "offset": [
+        0.0000000000000000,
+        0.0000000000000000
+      ],
+      "tint": [
+        [
+          163.0000000000000000,
+          131.0000000000000000,
+          98.0000000000000000,
+          64.0000000000000000
+        ],
+        [
+          134.0000000000000000,
+          105.0000000000000000,
+          65.0000000000000000,
+          64.0000000000000000
+        ],
+        [
+          79.0000000000000000,
+          57.0000000000000000,
+          34.0000000000000000,
+          76.0000000000000000
+        ],
+        [
+          61.0000000000000000,
+          46.0000000000000000,
+          44.0000000000000000,
+          76.0000000000000000
+        ]
+      ],
+      "tintMode": "overlay",
+      "variant": "Tint",
+      "visible": true,
+      "z": 0.0000000000000000
+    },
+    {
+      "blendData": {
+        "alpha": 1.0000000000000000,
+        "blendmode": "blend",
+        "color": [
+          255.0000000000000000,
+          255.0000000000000000,
+          255.0000000000000000
+        ]
+      },
+      "depthKind": "floor",
+      "name": "New Image Layer",
+      "offset": [
+        482.0000000000000000,
+        626.0000000000000000
+      ],
+      "parallax": [
+        0.0000000000000000,
+        0.0000000000000000
+      ],
+      "sprite": "libraryExteriorBackground",
+      "variant": "Image",
+      "visible": true,
+      "z": 0.0000000000000000
+    }
+  ],
+  "lightBlend": [
+    255.0000000000000000,
+    230.0000000000000000,
+    160.0000000000000000,
+    64.0000000000000000
+  ],
+  "requiredTextureGroups": [
+    "stroma"
+  ],
+  "shadowBlend": [
+    69.0000000000000000,
+    69.0000000000000000,
+    69.0000000000000000,
+    114.0000000000000000
+  ]
+}

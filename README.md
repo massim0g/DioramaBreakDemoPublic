@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="https://www.dioramabreak.com/assets/Diorama%20Break%20Main%20Capsule.png" alt="DB logo" style="width:65%">
+</p>
+
 # About
 Diorama Break is a special tactics JRPG where you can talk directly to the Hero!
 

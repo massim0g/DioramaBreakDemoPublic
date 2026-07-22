@@ -29,10 +29,10 @@ This has mostly just been tested with VSCode, but this workflow should work with
 1. Run `src\_tools\build_tools\relaunch_builder.ps1` to recompile and launch the **build daemon** (which should appear in your system tray).
 2. The build daemon will scan the repository files and construct a final build under the build/_win64 directory.
 3. After the initial build is complete, the build daemon will scan for file changes and automatically and incrementally update the build if a change is detected. 
-	a. This includes hot-reloading certain asset types if the game is running.
-	b. The builder will run the game if you press F5 while a window whose title contains the string "DioramaBreak" is focused. Alternatively, you can just run the game yourself by running `build/_win64/DioramaBreak.exe`.
-	c. To create a new build from scratch, simply call `relaunch_builder.ps1` again, which will clear the contents of the `build/` directory when it starts. You'll need to run this whenever your PC restarts, so we recommend assigning it to a keyboard shortcut.
-	d. You can shut down the builder by right-clicking the icon in the system tray.
+- This includes hot-reloading certain asset types if the game is running.
+- The builder will run the game if you press F5 while a window whose title contains the string "DioramaBreak" is focused. Alternatively, you can just run the game yourself by running `build/_win64/DioramaBreak.exe`.
+- To create a new build from scratch, simply call `relaunch_builder.ps1` again, which will clear the contents of the `build/` directory when it starts. You'll need to run this whenever your PC restarts, so we recommend assigning it to a keyboard shortcut.
+- You can shut down the builder by right-clicking the icon in the system tray.
 
 # Instructions for Custom Localizations
 Creating a custom localization for the game does **not** require cloning the full repo or building the game from scratch! Simply retrieve the `localization_kit.zip` from the releases tab. This will contain:

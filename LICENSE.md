@@ -30,14 +30,19 @@ c. create Non-Commercial Mods, and distribute them.
 ## 3. Conditions
 
 a. **Attribution.** Derivative Projects and Mods must credit "Diorama Break", "Massimo Gauthier", or "Studio Massimo Gauthier" and link to this repository or to dioramabreak.com.
+
 b. **Pass-through.** Parts of the Work included in a Derivative Project or Mod remain governed by this license. You must not offer them to others under different terms, and distributions must retain a copy of, or link to, this license.
+
 c. **No confusion.** You must not use the name "Diorama Break", the Game's logo, or its character names or likenesses in a way that suggests your project is made or endorsed by Studio Massimo Gauthier inc. Trademark rights are not granted by this license.
 
 ## 4. What you may not do
 
 a. **No standalone redistribution.** You may not redistribute the Work or any substantial part of it on its own, as-is, or in any form whose primary value is the Work's contents themselves (including source mirrors, asset packs, sprite/audio rips, and file dumps), whether or not for payment.
+
 b. **No flips.** You may not distribute the Game, or a project substantially similar to it, with only minimal or superficial changes. If your project would reasonably function as a substitute for the Game or its demo, it is not a Derivative Project and is not permitted.
+
 c. **No commercial use.** You may not use the Work or any part of it in a commercial product or service without prior written permission from Studio Massimo Gauthier inc.
+
 d. **No dataset use.** You may not use the Work to train machine learning or generative AI models, or include it in datasets distributed for that purpose without prior written permission from Studio Massimo Gauthier inc.
 
 ## 5. Commercial licensing

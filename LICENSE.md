@@ -22,7 +22,9 @@ You may **not** re-share the code or assets on their own, re-release Diorama Bre
 Provided you comply with section 3, you are granted a worldwide, royalty-free, non-exclusive, non-transferable license to:
 
 a. view, study, compile, and run the Work for personal, non-commercial purposes;
+
 b. create Non-Commercial Derivative Projects using parts of the Work, and distribute them;
+
 c. create Non-Commercial Mods, and distribute them.
 
 ## 3. Conditions

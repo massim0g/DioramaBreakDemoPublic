@@ -200,7 +200,7 @@ game_load :: proc()->(loaded:bool){
 	defer{
 		for name in sprites.texture_groups_dynamic{
 			if contains(sprites.game_load_preloaded_texture_groups, name) do texture_group_preload(name)
-			else do texture_group_unload(name)
+			else if name != "title_screen_HD" do texture_group_unload(name)
 		}
 	}
 	append(&sprites.game_load_preloaded_texture_groups, "cgs_ch1") //just always keep these loaded for now

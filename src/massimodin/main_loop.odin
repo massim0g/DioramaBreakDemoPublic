@@ -11,7 +11,7 @@ import "core:mem"
 import "core:mem/virtual"
 import stacktrace "core:debug/trace"
 
-GAME_VERSION :: "chapter_1_demo_v1.3.0"
+GAME_VERSION :: "chapter_1_demo_v1.3.1"
 GAME_VERSION_INT:i32
 
 /*Versioning Guide:

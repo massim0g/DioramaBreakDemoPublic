@@ -22,7 +22,7 @@ _testbed_pre_init :: proc(){
 
 _testbed_post_init :: proc(){
 
-	//titleScreen_goto()
+	titleScreen_goto()
 	//stage_goto(st.prosRoom)
 
 	//player_character_join_party(.minima)
@@ -35,7 +35,7 @@ _testbed_post_init :: proc(){
 	//player_character_equip(.pro, "whistlingBlade")
 	//_testbed_equipment()
 	//_testbed_consequence_encounter()
-	_testbed_polema_rematch()
+	//_testbed_polema_rematch()
 	//_testbed_post_game()
 	//dialogue_label_seen_set(di.combatTutorial, "polemaFightTutorial")
 	

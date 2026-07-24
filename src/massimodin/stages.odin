@@ -3005,6 +3005,7 @@ stage_load :: proc(s:^Stage){
 
 	json_unmarshal(s.data["requiredTextureGroups"], &stage.requiredTextureGroups)
 	for g in stage.requiredTextureGroups do texture_group_preload(g)
+	texture_group_unload("title_screen_HD")
 
 	if(stage_edit.enabled){ //clear stage edit state
 		_stage_edit_end()

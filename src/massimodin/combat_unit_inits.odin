@@ -267,14 +267,16 @@ _combat_unit_inits_reload :: proc(){
 							drawAlpha :f32= 1
 							if seq_cue(dashEnd,dashEnd+12) do drawAlpha = seq_map(1,0)
 							ambusher := scfind("consequenceAmbusher")
-							shader_set(sh.colorOnly)
+							shader_set(Sh_ColorOnly)
 							using ambusher.stageEntity._ptr
+							blendmode_set(blendmode)
 							sprite_draw_ex(
 								spriter.mySprite, stageEntity_draw_pos(ambusher.stageEntity), spriter.lastFrame, 
-								transform.scale, transform.angle, COLOR_BLACK, drawAlpha, blendmode
+								transform.scale, transform.angle, COLOR_BLACK, drawAlpha
 							)
+							blendmode_set(.blend)
 							shader_reset()
-						}, user.stageEntity.depth.(f32)-0.5)
+						}, user.stageEntity.depth-0.5)
 					}
 
 					if seq_cue(chargeTime){
@@ -287,7 +289,7 @@ _combat_unit_inits_reload :: proc(){
 						if seq_time()%2 == 0{
 							trailParticle_make(
 								user.stageCharacter.spriter.mySprite, 
-								stageEntity_draw_pos(user.stageEntity), user.stageEntity.depth.(f32)+0.5, 
+								stageEntity_draw_pos(user.stageEntity), user.stageEntity.depth+0.5, 
 								12, user.stageCharacter.spriter.lastFrame, 0,
 								user.stageCharacter.transform.scale, 0,
 								COLOR_BLACK, COLOR_WHITE, 0.7

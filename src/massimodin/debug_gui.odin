@@ -1,19 +1,21 @@
 package massimodin //@nested-tags:debug
 
 import "../imgui"
-import impl "../imgui/imgui_impl_sdl2"
-import implr "../imgui/imgui_impl_sdlrenderer2"
-import "../sdl2"
+import impl "../imgui/imgui_impl_sdl3"
+import implg "../imgui/imgui_impl_sdlgpu3"
+import "../sdl3"
 import "core:strings"
-import "core:path/filepath"
+import "core:sync"
+import win32 "core:sys/windows"
 
 _imgui_sdlevent_process :: impl.ProcessEvent
 
 ImguiSystem :: struct{
 	_context:^imgui.Context,
 	_io:^imgui.IO,
+	_style_default:imgui.Style,
 	_labels_id:[2]u8,
-	scale:f32
+	scale:f32,
 }
 imgui_system:^ImguiSystem
 
@@ -35,10 +37,41 @@ _imgui_init :: proc(){
 
 	imgui_system._labels_id = {33, 33}
 	imgui_system.scale = 1
-	
-	impl.InitForSDLRenderer(display._window, display._renderer)
-	implr.Init(display._renderer)
+	imgui_system._style_default = imgui.GetStyle()^
 
+	impl.InitForSDLGPU(display._window)
+	initInfo := implg.InitInfo{
+		Device = render.device,
+		ColorTargetFormat = render.swapchain_format,
+		MSAASamples = ._1,
+	}
+	implg.Init(&initInfo)
+
+	/*
+	The sdlgpu3 backend samples every texture with its linear sampler and exposes no way to change that (the nearest-sampler draw callbacks are static internals).
+	Swapping the two sampler pointers in its backend data makes everything sample nearest instead.
+	The struct prefix below mirrors ImGui_ImplSDLGPU3_Data from imgui_impl_sdlgpu3.cpp at v1.92.8, may need to be changed if imgui is updated.
+	*/
+	ImplSDLGPU3DataPrefix :: struct{
+		initInfo:implg.InitInfo,
+		renderState:rawptr,
+		currentSampler:^sdl3.GPUSampler,
+		vertexShader:rawptr,
+		fragmentShader:rawptr,
+		pipeline:rawptr,
+		texSamplerLinear:^sdl3.GPUSampler,
+		texSamplerNearest:^sdl3.GPUSampler,
+	}
+	implg.CreateDeviceObjects() //the backend creates its objects lazily on first NewFrame, force them so the samplers exist to swap
+	bd := cast(^ImplSDLGPU3DataPrefix)imgui_system._io.BackendRendererUserData
+	assert(bd != nil && bd.initInfo.Device == render.device, "imgui sdlgpu3 backend data mismatch, did the imgui version change?")
+	bd.texSamplerLinear, bd.texSamplerNearest = bd.texSamplerNearest, bd.texSamplerLinear
+}
+
+//imgui 1.92's sdlgpu3 backend takes the texture pointer itself as the id and pairs it with its own sampler internally
+_imgui_texture_id :: proc(texture:^sdl3.GPUTexture) -> imgui.TextureID{
+	assert(texture != nil, "Tried to display a nil texture through imgui!")
+	return imgui.TextureID(uintptr(texture))
 }
 
 FileTreeFolder :: struct{
@@ -64,7 +97,7 @@ file_tree_folder_new :: proc(name:string, parent:^FileTreeFolder=nil, allocator:
 }
 
 _imgui_shutdown :: proc(){
-	implr.Shutdown()
+	implg.Shutdown()
 	impl.Shutdown()
 	imgui.DestroyContext(imgui_system._context)
 	free(imgui_system)
@@ -73,22 +106,51 @@ _imgui_shutdown :: proc(){
 
 _imgui_update :: proc(){
 	imgui_system._labels_id = {33, 33}
-	implr.NewFrame()
+	implg.NewFrame()
 	impl.NewFrame()
 	imgui.NewFrame()
 	//imgui.ShowDemoWindow()
+
+	//refocuses window in case SDL loses keyboard focus, which can break imgui text entry fields
+	when ON_WINDOWS{
+		if imgui_system._io.WantTextInput && sdl3.GetKeyboardFocus() == nil{
+			hwnd := win32.HWND(sdl3.GetPointerProperty(sdl3.GetWindowProperties(display._window), sdl3.PROP_WINDOW_WIN32_HWND_POINTER, nil))
+			if hwnd != nil && win32.GetForegroundWindow() == hwnd{
+				win32.SetFocus(nil)
+				win32.SetFocus(hwnd)
+			}
+		}
+	}
+
 }
 
+//only builds the draw data; the recording happens in _imgui_gpu_record, inside the frame's command buffer
 _imgui_draw :: proc(){
 	imgui.Render()
-	implr.RenderDrawData(imgui.GetDrawData())
+}
+
+_imgui_render :: proc(cmdBuf:^sdl3.GPUCommandBuffer, swapchainTex:^sdl3.GPUTexture){
+	drawData := imgui.GetDrawData()
+	if drawData == nil do return
+
+	//font atlas updates make the backend acquire and submit its own command buffer internally, which must not race the loader threads' submits
+	sync.lock(&render._gpu_commands_submit_mutex)
+	defer sync.unlock(&render._gpu_commands_submit_mutex)
+
+	implg.PrepareDrawData(drawData, cmdBuf)
+
+	pass := sdl3.BeginGPURenderPass(cmdBuf,
+		&sdl3.GPUColorTargetInfo{texture=swapchainTex, load_op=.LOAD, store_op=.STORE}, 1, nil,
+	)
+	implg.RenderDrawData(drawData, cmdBuf, pass)
+	sdl3.EndGPURenderPass(pass)
 }
 
 _imgui_scale_update :: proc(){
-	lastScale := imgui_system.scale
 	imgui_system.scale = f32(settings.window_scale)/3
-	imgui_system._io.FontGlobalScale = imgui_system.scale
-	imgui.Style_ScaleAllSizes(imgui.GetStyle(), imgui_system.scale/lastScale) //floating point errors will unfortunately compound with multiple calls, why did they design it this way?
+	imgui.GetStyle()^ = imgui_system._style_default
+	imgui.Style_ScaleAllSizes(imgui.GetStyle(), imgui_system.scale)
+	imgui.GetStyle().FontScaleMain = imgui_system.scale //imgui 1.92: FontGlobalScale moved into style
 }
 
 
@@ -119,20 +181,16 @@ imgui_sprite :: proc(sp:^Sprite, buttonName:cstring = "", size:=Vec2{-1,-1}, fra
 
 	frame := sp.frames[frameIndex]
 	page := frame.texturePage
-	pageW:i32
-	pageH:i32
-	sdl2.QueryTexture(page, nil, nil, &pageW, &pageH)
-	pageSize := Vec2{f32(pageW), f32(pageH)}
-	framePos := Vec2{f32(frame.texturePagePos.x), f32(frame.texturePagePos.y)}
-	frameSize := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+	pageSize := Vec2{page.size, page.size}
+	framePos := frame.texturePagePos.pos
+	frameSize := frame.texturePagePos.size
 	if(size == {-1,-1}){
-		frame0 := sp.frames[0]
-		size = Vec2{f32(frame0.texturePagePos.w), f32(frame0.texturePagePos.h)}
+		size = sp.frames[0].texturePagePos.size
 	}
 
 	if(buttonName == ""){
 		imgui.Image(
-			imgui.TextureID(uintptr(page)), 
+			imgui.TextureRef{_TexID = _imgui_texture_id(page.texture)}, 
 			size, 
 			framePos/pageSize, 
 			(framePos + frameSize)/pageSize
@@ -142,7 +200,7 @@ imgui_sprite :: proc(sp:^Sprite, buttonName:cstring = "", size:=Vec2{-1,-1}, fra
 	else{
 		return imgui.ImageButton(
 			buttonName,
-			imgui.TextureID(uintptr(page)), 
+			imgui.TextureRef{_TexID = _imgui_texture_id(page.texture)}, 
 			size, 
 			framePos/pageSize, 
 			(framePos + frameSize)/pageSize
@@ -158,7 +216,7 @@ imgui_tex :: proc(tex:Tex, buttonName:cstring = "", part:=Rect{{-1,-1},{-1,-1}},
 
 	if(buttonName == ""){
 		imgui.Image(
-			imgui.TextureID(uintptr(tex.ptr)), 
+			imgui.TextureRef{_TexID = _imgui_texture_id(tex.ptr)}, 
 			part.size*scale,
 			part.pos/texSize,
 			(part.pos + part.size)/texSize
@@ -168,7 +226,7 @@ imgui_tex :: proc(tex:Tex, buttonName:cstring = "", part:=Rect{{-1,-1},{-1,-1}},
 	else{
 		return imgui.ImageButton(
 			buttonName,
-			imgui.TextureID(uintptr(tex.ptr)), 
+			imgui.TextureRef{_TexID = _imgui_texture_id(tex.ptr)}, 
 			part.size*scale,
 			part.pos/texSize,
 			(part.pos + part.size)/texSize

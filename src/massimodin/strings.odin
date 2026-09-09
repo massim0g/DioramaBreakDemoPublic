@@ -70,6 +70,18 @@ string_rune :: utf8.rune_at_pos
 
 runes_to_string :: utf8.runes_to_string
 
+string_capitalize :: proc(s:string, allocator:=context.temp_allocator) -> string{
+	if len(s) == 0 do return s
+	first := s[0]
+	if first >= 'a' && first <= 'z'{
+		buf := make([]u8, len(s), allocator)
+		buf[0] = first - 32
+		copy(buf[1:], s[1:])
+		return string(buf)
+	}
+	return strings.clone(s, allocator)
+}
+
 string_from_uip :: #force_inline proc(ptr,len:uintptr) -> string{
 	return strings.string_from_ptr(cast(^u8)ptr, int(len))
 }

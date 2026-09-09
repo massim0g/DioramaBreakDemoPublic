@@ -1,17 +1,18 @@
 package massimodin //@nested-tags:_main
 
-import "../sdl2"
+import "../sdl3"
 import "../tracy"
 import "../kernel32"
 import "base:runtime"
 import "core:os"
 import "core:sys/windows"
+import "core:sys/posix"
 import "core:path/filepath"
 import "core:mem"
 import "core:mem/virtual"
 import stacktrace "core:debug/trace"
 
-GAME_VERSION :: "chapter_1_demo_v1.3.1"
+GAME_VERSION :: "chapter_1_demo_v1.4.0"
 GAME_VERSION_INT:i32
 
 /*Versioning Guide:
@@ -24,7 +25,7 @@ The three version numbers are used as follows:
 */
 
 _quit_flag:^bool
-_sdl_ev:^sdl2.SDLEvent
+_sdl_ev:^sdl3.Event
 _tracy_frame_name:^cstring
 _stacktrace_context:^stacktrace.Context
 
@@ -32,11 +33,18 @@ game_quit :: proc(){ //exit the game at the end of the current loop
 	_quit_flag^ = true
 }
 
+// The engine's odin runtime does not start up automatically on linux, so this is used to start it manually
+@export
+_odin_runtime_init :: proc "c" (){
+	context = runtime.default_context()
+	runtime._startup_runtime()
+}
+
 @export
 _set_entry_globals :: proc(
 	__os_allocator:Allocator,
 	__quit_flag:^bool,
-	__sdl_ev:^sdl2.SDLEvent,
+	__sdl_ev:^sdl3.Event,
 	__stacktrace_context:^stacktrace.Context,
 	__game_version:^string
 ){
@@ -52,7 +60,7 @@ _set_entry_globals :: proc(
 	__game_version^ = GAME_VERSION
 
 	//derive values independently
-	executable_directory = string_clone(string(sdl2.GetBasePath()))
+	executable_directory = string_clone(string(sdl3.GetBasePath()))
 	
 	verParts := string_split(peek(string_split(GAME_VERSION, "_v")), ".")
 	GAME_VERSION_INT = i32(string_to_int(verParts[0]) or_else 0) << 16 | i32(string_to_int(verParts[1]) or_else 0) << 8 | i32(string_to_int(verParts[2]) or_else 0)
@@ -70,18 +78,18 @@ _set_entry_globals :: proc(
 	}
 
 	when tracy.TRACY_ENABLE{
-		massimodinDir, _ := filepath.join({project_directory, "src/massimodin"}, context.temp_allocator)
+		massimodinDir, _ := filepath.join({project_directory, "src/massimodin"}, context.temp_allocator) //still works on linux since tracy is looking at the windows paths either way
 		tracy_whitelist_directory,_ = filepath.replace_separators(massimodinDir, '/')
 	}
 }
 
 @export
 _init_default_allocators :: proc(os:^Allocator, default:^Allocator){
-	defaultAllocBufferSize :: mem.Megabyte*128
+	defaultAllocBufferSize :: mem.Megabyte*512 //static reserve, pages only commit as used
 	
 	os^ = context.allocator
 
-	when DEBUG{
+	when DEBUG{ //todo: fix stage editor undo/redo and cut this out
 		defaultArena := new(virtual.Arena)
 		err := virtual.arena_init_static(defaultArena, defaultAllocBufferSize)
 		assertf(err == .None, "Error creating default arena! %v", err)
@@ -101,14 +109,23 @@ _init_default_allocators :: proc(os:^Allocator, default:^Allocator){
 _game_init :: proc(){
 	when DEBUG do _testbed_pre_init()
 
-	when !ODIN_DEBUG && ON_WINDOWS{
+	when !ODIN_DEBUG && ON_PC{
+		//route stdout/stderr into a log file next to the executable.
 		logFile, err := os.open(filepath.join({executable_directory, "log_engine.txt"}, context.temp_allocator) or_else "", {.Write, .Create, .Trunc})
 		if err == nil {
 			os.stdout = logFile
 			os.stderr = logFile
-			handle := windows.HANDLE(os.fd(logFile))
-       		kernel32.SetStdHandle(kernel32.STD_OUTPUT_HANDLE, handle)
-       		kernel32.SetStdHandle(kernel32.STD_ERROR_HANDLE, handle)
+
+			when ON_WINDOWS{
+				handle := windows.HANDLE(os.fd(logFile))
+				kernel32.SetStdHandle(kernel32.STD_OUTPUT_HANDLE, handle)
+				kernel32.SetStdHandle(kernel32.STD_ERROR_HANDLE, handle)
+			}
+			else when ON_LINUX{
+				fd := posix.FD(os.fd(logFile))
+				posix.dup2(fd, 1)
+				posix.dup2(fd, 2)
+			}
 		}
 	}
 
@@ -128,9 +145,10 @@ _game_init :: proc(){
 	_audio_banks_preload_all()
 	_save_system_init() //inits blank settings
 	_display_system_init()
+	_render_system_init()
+	_display_targets_init()
 	_sprite_system_init()
 	_camera_system_init()
-	_shader_system_init()
 	_texture_groups_index_file_load()
 	_dialogue_system_init()
 	_dialogues_preload_all()
@@ -147,6 +165,7 @@ _game_init :: proc(){
 	_ui_system_init()
 	_curve_system_init()
 	_steamworks_init()
+	_release_channel_get()
 
 	//if something failed to init (mainly steamworks), quit early
 	if _quit_flag^{
@@ -222,46 +241,43 @@ _game_update :: proc(){
 			tracy.FrameMarkEnd(tracy_frame_name)
 		}
 	}
+	else do time_frame_mark("Update")
 
 	_delta_time_target_refresh()
 
 	//poll events
 	input.mouse_scroll = 0
-	for sdl2.PollEvent(_sdl_ev){
+	for sdl3.PollEvent(_sdl_ev){
 		//print("poll event?")
 		#partial switch _sdl_ev.type{
 			case .QUIT:
 				game_quit()
-			
-			case .CONTROLLERDEVICEADDED:
-				joyInd := _sdl_ev.cdevice.which
+
+			case .GAMEPAD_ADDED:
+				joyId := _sdl_ev.gdevice.which
 				for i in 0..<GAMEPADS_CAP{
-					if(input.gamepads_open[i] == nil && sdl2.IsGameController(joyInd)){
-						input.gamepads_open[i] = sdl2.GameControllerOpen(joyInd)
+					if(input.gamepads_open[i] == nil && sdl3.IsGamepad(joyId)){
+						input.gamepads_open[i] = sdl3.OpenGamepad(joyId)
 						break
 					}
 				}
 
-			case .CONTROLLERDEVICEREMOVED:
-				joyInd := sdl2.JoystickID(_sdl_ev.cdevice.which)
+			case .GAMEPAD_REMOVED:
+				joyId := _sdl_ev.gdevice.which
 				for i in 0..<GAMEPADS_CAP{
-					if(input.gamepads_open[i] != nil && joyInd == sdl2.JoystickInstanceID(sdl2.GameControllerGetJoystick(input.gamepads_open[i]))){
-						sdl2.GameControllerClose(input.gamepads_open[i])
+					if(input.gamepads_open[i] != nil && joyId == sdl3.GetJoystickID(sdl3.GetGamepadJoystick(input.gamepads_open[i]))){
+						sdl3.CloseGamepad(input.gamepads_open[i])
 						input.gamepads_open[i] = nil
 						input.gamepad_states[i] = GamepadState{}
 						input.gamepad_states_last_frame[i] = GamepadState{}
 					}
 				}
 
-			case .MOUSEWHEEL:
+			case .MOUSE_WHEEL:
 				input.mouse_scroll = int(-_sdl_ev.wheel.y)
 
-			case .WINDOWEVENT:
-				#partial switch _sdl_ev.window.event{
-					case .ENTER: input.mouse_in_window = true
-					case .LEAVE: input.mouse_in_window = false
-				}
-				
+			case .WINDOW_MOUSE_ENTER: input.mouse_in_window = true
+			case .WINDOW_MOUSE_LEAVE: input.mouse_in_window = false
 		}
 
 		when (DEBUG) do _imgui_sdlevent_process(_sdl_ev)
@@ -300,8 +316,6 @@ _game_update :: proc(){
 	_camera_system_update()
 	_audio_system_update()
 
-	if !stage_edit.enabled do _foliage_bulk_update()
-
 	when(DEBUG){
 		_shell_update()
 		_stage_edit_update()
@@ -310,6 +324,7 @@ _game_update :: proc(){
 		_testbed_update()
 	}
 
+
 	_entities_just_made_process()
 	_entities_destruction_process()
 
@@ -317,6 +332,7 @@ _game_update :: proc(){
 
 	
 	//DRAW
+	time_frame_mark("Draw")
 	_window_system_update()
 	_entities_event_process(.preDraw)
 	
@@ -328,50 +344,57 @@ _game_update :: proc(){
 		_display_pre_draw() //targets main texture
 
 		_stage_render()
-		
-		_dialogue_system_draw()
+
+		render_depth_ui(.misc)
 		_ui_system_draw()
+		render_depth_ui(.dialogue)
+		_dialogue_system_draw()
 
-		_entities_render_event_process(.drawEnd)
-
+		//sequence deferred draws (set their own depth)
 		_sequence_deferred_draws_draw()
-
+		
 		when DEBUG{
+			render_depth_layer(.uiTop)
 			_testbed_draw()
 			_debug_capture_update()
 		}
-		
-		_display_post_draw() //resets target to window
+
+		_display_post_draw()
 	}
 	else{ //standard in-game rendering mode
 		_display_pre_draw() //targets main texture
 
-		//draw stage elements
+		//draw stage elements depth-sorted
 		_stage_render()
 
-		//draw entities (deprecated in favor of stage render)
-		//_entities_render_events_process()
-
-		_colliders_debug_draw()
-		
 		//UI
+		render_depth_ui(.combatUI)
 		_combat_UI_draw()
-		_sequence_deferred_draws_draw()
+		render_depth_ui(.misc)
 		_ui_system_draw()
-		if !dialogue.hd_overlay_enabled do _dialogue_system_draw()
+		if !dialogue.hd_overlay_enabled{
+			render_depth_ui(.dialogue)
+			_dialogue_system_draw()
+		}
 
-		_entities_render_event_process(.drawEnd)
-		if topParticles,ok := particles._groups[-INF];ok do particles_draw(topParticles.particles[:])
+		//sequence deferred draws (set their own depth)
+		_sequence_deferred_draws_draw()
 
 		when DEBUG{
+			render_depth_layer(.uiTop)
 			_testbed_draw()
 			_debug_capture_update()
 		}
 
 		if dialogue.hd_overlay_enabled{
+			render_depth_ui(.dialogue)
 			tex_target_set(display.hd_tex)
 			draw_clear(DISPLAY_BASE_COLOR)
-			sdl2.RenderCopy(display._renderer, display_main_tex(), nil, nil)
+			render_quad(display.window_tex.ptr, tex_sampler(display.window_tex), Quad{
+				worldRect = {0,Vec2(display.hd_tex.size)},
+				uvRect = {0,0,1,1},
+				blend = BLEND_WHITE,
+			})
 			display.hd_enabled = true
 			_dialogue_system_draw()
 			
@@ -379,11 +402,11 @@ _game_update :: proc(){
 			display.hd_enabled = false
 		}
 		else{
-			_display_post_draw() //resets target to window
+			_display_post_draw() //resets target and depth to window
 		}
 	}
 
-	when (DEBUG){
+	when DEBUG{
 		_imgui_draw()
 		if(debug.showInfo) do _debug_info_draw()
 	}
@@ -398,28 +421,16 @@ _game_update :: proc(){
 	}
 	
 	//ASSET HOT RELOAD
-	_assets_hot_reload_check()	
-
-	//THREADED UPDATE BLOCKS
-	thread_pool_block(&foliage_system.update_pool)
+	_assets_hot_reload_check()
 
 	//FINISH UPDATE
-	free_all(context.temp_allocator)
 	time.frame += 1
-}
-
-@export
-_game_render_present :: proc(timeSinceFrameStart:f32){
-	time.lastFrameDuration = timeSinceFrameStart
-	//trace("Render Present") //separated into its own proc because vsync screws up the profiler
-	sdl2.RenderPresent(display._renderer)
 }
 
 @export
 _game_quit :: proc(){
 	print("QUITTING GAME")
-	sdl2.Quit()
-	_display_system_destroy()
+	sdl3.DestroyWindow(display._window)
 	_steamworks_shutdown()
 	os.exit(0)
 }

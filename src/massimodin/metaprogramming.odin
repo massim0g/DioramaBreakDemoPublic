@@ -44,6 +44,18 @@ struct_set_by_var_name :: #force_inline proc(s:^$T, field:string, val:$E){
 }
 struct_set :: proc{struct_set_by_field_offset, struct_set_by_var_name, struct_set_by_field}
 
+//Remember, union indices are 1-indexed by default (0 means nil)
+union_variant_index_by_name :: proc($U:typeid, name:string) -> (ind:i64, found:bool){
+	ti := reflect.type_info_base(type_info_of(U)).variant.(reflect.Type_Info_Union)
+
+	for v,i in ti.variants{
+		if named, ok := v.variant.(reflect.Type_Info_Named); ok && named.name == name do return i64(i)+i64(!ti.no_nil), true
+	}
+
+	return i64(!ti.no_nil)-1, false
+}
+union_variant_index :: reflect.get_union_variant_raw_tag
+
 proc_call_delayed :: proc(callback:Callback, delay:f32, timeUnit:=TimeUnit.frames, persistent:=true){
 	append(&time.delayed_callbacks, DelayedCallback{
 		callback,

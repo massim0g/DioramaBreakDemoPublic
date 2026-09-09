@@ -612,12 +612,12 @@ combatAction_aiming_ring_draw :: proc(user:^CombatUnit, mask:[]Vec2i, col:=COLOR
 	tex_target_set(combat.grid_buffer_tex_a)
 		tex_draw(combat.grid_tex, 0,0)
 	tex_target_set(combat.grid_tex, {0,0}, false)
-		shader_set(sh.aimingRings)
-		shader_uniform_set(sh.aimingRings, "texSize", Vec2(combat.grid_tex.size))
-		shader_uniform_set(sh.aimingRings, "outlineRevealAngle", ui_cue_map("actionSelectHover", 0, 12, 0, 90, cu.easeIn))
-		shader_uniform_set(sh.aimingRings, "centerPos", combatUnit_draw_pos(user, unitPos))
-		shader_texture_bind(sh.aimingRings, "destination", combat.grid_buffer_tex_a)
-		defer shader_texture_unbind(combat.grid_buffer_tex_a)
+		shader_set(Sh_AimingRings{
+			texSize = Vec2(combat.grid_tex.size),
+			outlineRevealAngle = ui_cue_map("actionSelectHover", 0, 12, 0, 90, cu.easeIn),
+			centerPos = combatUnit_draw_pos(user, unitPos),
+		})
+		shader_texture_bind("destination", combat.grid_buffer_tex_a)
 		tex_draw_ex(combat.aiming_ring_mask_tex, 0, 0, alpha=ui_cue_map("actionSelectHover", 0, 15, 0, 0.1, cu.easeIn))
 		shader_reset()
 	tex_target_reset(3)

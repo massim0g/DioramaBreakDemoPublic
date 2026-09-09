@@ -8,8 +8,8 @@ import "core:bytes"
 import "core:math"
 import "core:fmt"
 
-import "../../../sdl2"
-import "../../../sdl2/ttf"
+import "../../../sdl3"
+import ttf "../../../sdl3/ttf"
 
 FONT_PAGE_SIZE :: 4096
 FONT_IDS_DEFAULT :: `package massimodin
@@ -27,7 +27,7 @@ _reload_font_ids :: proc(){
 
 FontPage :: struct{
 	buf:bytes.Buffer,
-	surf:^sdl2.Surface,
+	surf:^sdl3.Surface,
 	drawPos:[2]i32,
 	rowH:i32,
 }
@@ -54,7 +54,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 	pagesDir, _   := filepath.join({paths.build, "font_pages"})
 	indexesDir, _ := filepath.join({paths.build, "font_page_indexes"})
 
-	sdl2.Init(sdl2.INIT_VIDEO)
+	_ = sdl3.Init(sdl3.INIT_VIDEO)
 	ttf.Init()
 
 	idConfig := IDConfig{
@@ -207,10 +207,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 
 		if pageName not_in pagesData{
 			newPage := FontPage{}
-			newPage.surf = sdl2.CreateRGBSurfaceWithFormat(
-				0, FONT_PAGE_SIZE, FONT_PAGE_SIZE, 32,
-				u32(sdl2.PixelFormatEnum.ABGR8888),
-			)
+			newPage.surf = sdl3.CreateSurface(FONT_PAGE_SIZE, FONT_PAGE_SIZE, .ABGR8888)
 			bytes.buffer_init_allocator(&newPage.buf, 0, 4096)
 			pagesData[pageName] = newPage
 		}
@@ -240,13 +237,13 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 				bytes.buffer_write_string(&page.buf, fontId)
 				write_v(&page.buf, u32(len(outRunes)))
 
-				loadedFont := ttf.OpenFont(cPath, size)
+				loadedFont := ttf.OpenFont(cPath, f32(size))
 				ttf.SetFontKerning(loadedFont, false)
 				ttf.SetFontHinting(loadedFont, .MONO)
 				defer ttf.CloseFont(loadedFont)
 
 				for r in outRunes{
-					charSurf := ttf.RenderGlyph32_Solid(loadedFont, r, sdl2.Color{255, 255, 255, 255})
+					charSurf := ttf.RenderGlyph_Solid(loadedFont, u32(r), sdl3.Color{255, 255, 255, 255})
 					if charSurf == nil{
 						write_v(&page.buf, r)
 						write_v(&page.buf, u16(0))
@@ -255,7 +252,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 						write_v(&page.buf, u16(0))
 						continue
 					}
-					defer sdl2.FreeSurface(charSurf)
+					defer sdl3.DestroySurface(charSurf)
 
 					if page.drawPos.x + charSurf.w > FONT_PAGE_SIZE{
 						page.drawPos.x = 0
@@ -266,7 +263,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 						}
 					}
 
-					drawRect := sdl2.Rect{
+					drawRect := sdl3.Rect{
 						page.drawPos.x,
 						page.drawPos.y,
 						charSurf.w,
@@ -279,7 +276,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 					write_v(&page.buf, u16(drawRect.w))
 					write_v(&page.buf, u16(drawRect.h))
 
-					sdl2.BlitSurface(charSurf, nil, page.surf, &drawRect)
+					sdl3.BlitSurface(charSurf, nil, page.surf, &drawRect)
 
 					page.rowH = math.max(drawRect.h, page.rowH)
 					page.drawPos.x += drawRect.w
@@ -309,7 +306,7 @@ pipeline_fonts_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 			reload_request_write("font", transmute([]u8)strings.join({pagePath, indexPath}, "\n"))
 		}
 
-		sdl2.FreeSurface(page.surf)
+		sdl3.DestroySurface(page.surf)
 	}
 
 	if ids_write(idConfig, &idState, namesToAdd[:]) do pipeline.codegenDirty = true

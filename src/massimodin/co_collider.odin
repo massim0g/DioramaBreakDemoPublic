@@ -3,7 +3,7 @@ package massimodin //@nested-tags:_components/collision
 //@nested-tags:engine/collision
 
 import "core:slice"
-import "../sdl2"
+import "../sdl3"
 
 Collider :: struct{
 	using base:ComponentBase,

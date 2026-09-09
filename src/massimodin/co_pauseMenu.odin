@@ -260,12 +260,6 @@ settings_menu :: proc(){
 	sectionHeading("display", 0, textCol)
 	if selector("windowScale", itemSize, &settings.window_scale, textCol, 1, min(ceil(monitor_size()/DISPLAY_SIZE)), descriptionRect=descriptionRect) do window_resize(settings.window_scale)
 	if toggle("fullscreen", itemSize, &settings.window_fullscreen, textCol, descriptionRect) do window_set_fullscreen(settings.window_fullscreen)
-	if display.hd_enabled{
-		pm:=settings.performance_mode
-		if optionSelector("displayQuality", itemSize, &pm, textCol, descriptionRect){
-			proc_call_delayed(callback_make(proc(pm:^DisplayPerformanceMode){display_performance_mode_set(pm^)}, pm), 1) //this clears the tex target which could mess with rendering, so we delay the call
-		}
-	}
 
 	//game
 	sectionHeading("game", itemSize, textCol)
@@ -293,7 +287,7 @@ settings_menu :: proc(){
 
 	fonts.default = fo.newsreader__70
 
-	if display.hd_enabled && (titleScreen_main_button("back", textCol) || ginputs[.cancel]){
+	if display.hd_enabled && (titleScreen_page_button("back", textCol) || ginputs[.cancel]){
 		settings_save()
 		cofind(TitleScreen, 0).currentPage = .main
 	}
@@ -442,11 +436,10 @@ menu_character_stats :: proc(pid:PlayerCharacterID, windowRect:Rect, textCol:Col
 	ui_cursor().y-=2
 	statusStat("hp", charData.hp, charInfo.maxHp)
 	drawPos :Vec2= ui_cursor()^
-	draw_rect_outline(Rect{drawPos, Vec2{f32(charInfo.maxHp*2+3),7}}, textCol)
-	draw_color(textCol)
+	draw_rect_outline(Rect{drawPos, Vec2{f32(charInfo.maxHp*2+3),7}}, 1, textCol)
 	for i in 1..=charData.hp{
 		x := drawPos.x+f32(i*2)
-		draw_line(x, drawPos.y+2, x, drawPos.y+4)
+		draw_line(x, drawPos.y+2, x, drawPos.y+4, color=textCol)
 	}
 	ui_cursor().y += 7
 	statusStat("move", charInfo.move)
@@ -457,7 +450,7 @@ menu_character_stats :: proc(pid:PlayerCharacterID, windowRect:Rect, textCol:Col
 		
 		statusStat("level", 1) //todo: level-up system
 		drawPos = ui_cursor()^
-		draw_rect_outline(Rect{drawPos, Vec2{54,7}}, textCol)
+		draw_rect_outline(Rect{drawPos, Vec2{54,7}}, 1, textCol)
 		if charData.xp != 0{
 			drawPos += 2
 			right := drawPos.x+f32(charData.xp/2)
@@ -504,18 +497,21 @@ case .update:
 	}
 	
 
-case .drawEnd:
+case .draw:
+	render_depth_ui(.menus)
 	bgAlpha :f32= 0
 	if currentTab == .quit && !quitting do bgAlpha = 1
 	else if combat.phase != .disabled do bgAlpha = 0.5
-	draw_rect(Rect{0, DISPLAY_SIZE}, COLOR_BLACK, ui_cue_map_stateful("pauseMenuBackground", 12, bgAlpha))
+	draw_rect_fullscreen(COLOR_BLACK, ui_cue_map_stateful("pauseMenuBackground", 12, bgAlpha))
 
 	headerPos := Vec2{-4,3}
 	textCol := color_hex(PAUSE_MENU_TEXT_COL)
 
 	tex_target_set(headerTex, headerPos)
 		headerRect := rectf_make_points(-4,3,DISPLAY_WIDTH+3,30)
-		nineslice_draw(sp.menuBox, headerRect, blendmode=BlendMode.one)
+		blendmode_set(.one)
+		nineslice_draw(sp.menuBox, headerRect)
+		blendmode_set(.blend)
 
 		ui_begin("pauseMenu", {112, 6})
 		

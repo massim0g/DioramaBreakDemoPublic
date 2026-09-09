@@ -101,7 +101,7 @@ _collider_update :: proc(collider:^Collider){
 @(disabled=!DEBUG)
 _colliders_debug_draw :: proc(){
 	if(!collision_system._colliders_draw) do return
-	camera_set(stage.camera_pos)
+	camera_set(stage_camera_pos())
 	drawRect := Recti{{0,0},{COLLISION_REGION_SIZE, COLLISION_REGION_SIZE}}
 	for y in 0..<collision_system._regions.h{
 		for x in 0..<collision_system._regions.w{

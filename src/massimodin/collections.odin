@@ -24,6 +24,9 @@ len_fixed_capacity_ptr :: #force_inline proc "contextless" (array: ^$T/[dynamic;
 len_soa_array :: #force_inline proc "contextless" (array: $T/#soa[dynamic]$E) -> int{
 	return builtin.len(array)
 }
+len_soa_slice :: #force_inline proc "contextless" (slice: $T/#soa[]$E) -> int{
+	return builtin.len(slice)
+}
 len_array_ptr :: #force_inline proc "contextless" (array: ^$T/[dynamic]$E) -> int{
 	return builtin.len(array)
 }
@@ -49,6 +52,7 @@ len :: proc{
 	len_fixed_capacity,
 	len_fixed_capacity_ptr,
 	len_soa_array,
+	len_soa_slice,
 	len_array_ptr,
 	len_slice,
 	len_map,
@@ -235,6 +239,7 @@ slice_to_array :: proc(a: $T/[]$E, allocator:=context.allocator) -> [dynamic]E {
 
 slice_from_ptr :: slices.from_ptr
 slice_equal :: slices.equal
+slice_to_bytes :: slices.to_bytes
 
 sort_slice :: slices.sort_by
 sort_array :: #force_inline proc(array:^$T/[dynamic]$E, less:proc(a,b:E)->bool){

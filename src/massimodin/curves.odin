@@ -36,6 +36,7 @@ CURVE_EDITOR_GRAPH_SIZE :: 512
 CURVE_EDITOR_VELOCITY_SCALE :f32: 6
 
 _curve_editor_save :: proc(forceSaveAs:=false)->(ok:bool){ 
+	when !ON_WINDOWS do return true //never save game project files on non-windows builds
 
 	assert(DEBUG && curves.curve_editing != nil, "Attempted to save a curve outside of curve editing mode.")
 
@@ -51,7 +52,7 @@ _curve_editor_save :: proc(forceSaveAs:=false)->(ok:bool){
 	resize(&curves.curve_editing.points, len(saveData))
 	copy(curves.curve_editing.points[:], saveData)
 
-	succ := os.write_entire_file(curves.filepaths[curves.curve_editing.name], slice.to_bytes(saveData))
+	err := os.write_entire_file(curves.filepaths[curves.curve_editing.name], slice.to_bytes(saveData))
 
 	curves.last_save_stack_size = len(curves.undoStack)
 	
@@ -235,26 +236,24 @@ _curve_editor_update :: proc(){
 
 	tex_target_set(curves.editing_tex)
 		//draw grid lines
-		draw_color(color_hex(0x515151))
 		for x:f32=0;x<=1;x+=1./4.{
 			drawX := x*texSize.x
 			if x == 1 do drawX -= 1
-			draw_line(drawX, 0, drawX, texSize.y)
+			draw_line(drawX, 0, drawX, texSize.y, color=color_hex(0x515151))
 		}
 		for y:f32=0;y<=1;y+=1./4.{
 			drawY := y*texSize.y
 			if y == 1 do drawY -= 1
-			draw_line(0, drawY, texSize.y, drawY)
+			draw_line(0, drawY, texSize.y, drawY, color=color_hex(0x515151))
 		}
 		//draw curve
-		draw_color(color_hex(0xff3800))
 		lastPos := Vec2{0, curve_eval(&curves.curve_working, 0)*texSize.y}
 		increment := 1/f32(curves.editing_tex.size.x)
 		cw := curves.curve_working
 
 		for x:f32=0;x<=1;x+=increment{
 			newPos := Vec2{x, curve_eval(&curves.curve_working, x)}*texSize
-			draw_line(lastPos, newPos)
+			draw_line(lastPos, newPos, color=color_hex(0xff3800))
 			lastPos = newPos
 		}
 
@@ -271,8 +270,7 @@ _curve_editor_update :: proc(){
 			selectMul = isSelected ? 2:1
 
 			velDrawPos := pointVelocityGraphPos(point)*texSize
-			draw_color(color_hex(0xbd7d18))
-			draw_line(drawPos, velDrawPos)
+			draw_line(drawPos, velDrawPos, color=color_hex(0xbd7d18))
 
 			draw_rect(velDrawPos-pointOff/2*selectMul, velDrawPos+pointOff/2*selectMul, color_hex(isSelected ? 0xf6da62 : 0xf6aa08))
 		}

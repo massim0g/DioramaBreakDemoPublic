@@ -1,7 +1,7 @@
 #+feature using-stmt
 package massimodin //@nested-tags:_components/
 
-import "../sdl2"
+import "../sdl3"
 
 GodRay :: struct{
 	using base:RenderComponentBase,
@@ -62,52 +62,57 @@ case .updateEditor:
 
 case .preDraw:
 	depth = stageEntity.depth
-	visible = rayEnabled && stageEntity.componentsVisible
-	
+	camRect := stage_camera_rect()
+	//check visibility. Also, god ray rendering is a bit expensive, so do a culling check.
+	visible = rayEnabled && stageEntity.componentsVisible && (
+		rect_intersects(camRect, {drawVertices[0], drawVertices[3]}) ||
+		rect_intersects(camRect, {drawVertices[0], drawVertices[4]}) ||
+		rect_intersects(camRect, {drawVertices[3], drawVertices[4]}) ||
+		(beamWidthAtSource > 0 && rect_intersects(camRect, {drawVertices[1], drawVertices[2]}))
+	)
+
 case .draw:
 	camPos := stage_camera_pos()
+	shader_set(Sh_Base)
 	tex_target_set(stage.shadow_layer, camPos)
-		shader_set(shaders._base_shader)
 		
-		vertices:[5]sdl2.Vertex
-		for &v, i in vertices{
-			v.color = sdl2.Color{255,255,255,255}
-			v.position = transmute(sdl2.FPoint)(drawVertices[i] - camPos)
+		corners:[5]Vertex
+		for &v, i in corners{
+			v.blend = BLEND_WHITE
+			v.pos = drawVertices[i]
 		}
 
 		if beamFadeOutStartOffset < beamEndOffset{
-			vertices[3].color.a = 0
-			vertices[4].color.a = 0
+			corners[3].blend.a = 0
+			corners[4].blend.a = 0
 		}
 
-		indices := [9]i32{
-			0, 1, 2,
-			1, 3, 4,
-			1, 4, 2,
+		//the fan was indexed, the mesh path takes a flat triangle list
+		verts := [9]Vertex{
+			corners[0], corners[1], corners[2],
+			corners[1], corners[3], corners[4],
+			corners[1], corners[4], corners[2],
 		}
+		draw_mesh_blank(verts[:])
 
-		sdl2.RenderGeometry(display._renderer, nil, &vertices[0], 5, &indices[0], 9)
+		blendmode_set(.subtract)
 		if stageEntity.invertShadowMargin > 0{
 			drawRect := stageEntity_draw_rect(stageEntity)
-			tex_blendmode_set(stageEntity.invertShadowTex, .subtract)
 			tex_draw(stageEntity.invertShadowTex, drawRect.pos)
-			tex_blendmode_set(stageEntity.invertShadowTex, .blend)
 		}
 		else{
 			sprite_draw_ex(
 				spriter.mySprite, stageEntity_draw_pos(stageEntity), spriter.lastFrame,
-				transform.scale, transform.angle, COLOR_WHITE, 1, BlendMode.subtract
+				transform.scale, transform.angle, COLOR_WHITE, 1
 			)
-			sdl2.SetTextureBlendMode(spriter_frame_get_ptr(spriter).texturePage, .BLEND) //otherwises messes with precise-depth entities 
 		}
+		blendmode_set(.blend)
 	tex_target_reset()
 
-	destination := display_main_tex_inactive()
-	shader_set(sh.shadowLayer)
-	shader_texture_bind(sh.shadowLayer, "destination", destination)
-	defer shader_texture_unbind(destination)
+	destination := display_snapshot()
+	shader_set(Sh_ShadowLayer)
+	shader_texture_bind("destination", destination)
 	tex_draw_ex(stage.shadow_layer, camPos)
-	shader_reset()
-	shader_reset()
+	shader_reset(2)
 
 }}

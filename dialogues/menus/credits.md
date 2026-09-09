@@ -50,8 +50,7 @@ VSCode
 ---
 **Libraries and Assets Used**
 Odin Programming Language
-OpenGL and GLSL
-SDL2
+SDL3
 FMOD Studio by Firelight Technologies Pty Ltd.
 Dear ImGui
 Tracy
@@ -76,7 +75,7 @@ Noto Sans and Noto Serif by The Noto Project Authors
 Racoon Serif by emhuo
 
 # copyright
-Copyright 2026 Studio Massimo Gauthier Inc. All rights reserved.
+Copyright 2026 Studio Massimo Gauthier inc. All rights reserved.
 
 # introA
 ART TEAM

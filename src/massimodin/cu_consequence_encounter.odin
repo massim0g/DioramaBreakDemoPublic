@@ -101,7 +101,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 				if seq_cue(&t, 160){
 					seq_draw(proc(){
 						drawY := seq_map(35, sp.cg_consequence.size.y+20, cu.popInHalf)
-						draw_rect(0,DISPLAY_SIZE, color_hex(drawY > DISPLAY_HEIGHT ? 0x7f3429 : 0x2c2430))
+						draw_rect_fullscreen(color_hex(drawY > DISPLAY_HEIGHT ? 0x7f3429 : 0x2c2430))
 						sprite_draw(sp.cg_consequence, {DISPLAY_WIDTH/2, drawY})
 					})
 				}
@@ -409,7 +409,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 			stageCharacter_sprite_set(pro, flag_check("proBladeShattered") ? sp.pro_combat_ko_loop_noSword: sp.pro_combat_ko_loop)
 			minima := scmake("minima", proPos + {64,0}, .left, true)
 			entity_make(InterferenceEffect)
-			camera_tracking_set(cons.transform, minima.transform)
+			camera_tracking_set(cons, minima)
 			audio_background_add(au.interferenceDrone)
 			audio_parameter_set(au.interferenceDrone, "fadeIn", 0.6)
 		}, [3]int{0,150,185}, .hardCutToFade)
@@ -517,23 +517,22 @@ _cutscenes_reload_consequence_encounter :: proc(){
 						swordPos := stageEntity_draw_pos(spriteEffect_find(sp.proSword_whole).stageEntity)
 						consPos := scpos("consequence")
 						lineEndPos := vec2_dir(swordPos, consPos)*vec2_distance(swordPos, consPos)*2 + consPos
-						draw_color(COLOR_WHITE)
 						@(static) shatterTex:Tex
 						@(static) shatterTexOffset:Vec2
-						if seq_cue(61){
+						if seq_cue(60){
 							shatterTex, shatterTexOffset = sprite_tex_make(sp.proSword_shattering) //required to prevent color shader from interfering with line render
 							tex_target_set(shatterTex, shatterTexOffset)
-							shader_set(sh.colorOnly)
+							shader_set(Sh_ColorOnly)
 							sprite_draw(sp.proSword_shattering, 0)
 							shader_reset()
 							tex_target_reset()
 						}
-						else if seq_cue(60,63) do draw_line(consPos, seq_map(consPos, lineEndPos))
-						else do draw_line(consPos, lineEndPos)
+						else if seq_cue(60,63) do draw_line(consPos, seq_map(consPos, lineEndPos), color=COLOR_WHITE)
+						else do draw_line(consPos, lineEndPos, color=COLOR_WHITE)
 
 						tex_draw(shatterTex, swordPos+shatterTexOffset)
 
-						if seq_cue(136) do tex_destroy(shatterTex)
+						if seq_cue(135) do tex_destroy(shatterTex)
 					}, useStageCameraPos=true)
 				}
 
@@ -630,7 +629,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 				if scmove(pro, {{32*proDir,0}}, 5., relative=true, moveSprite=sp.pro_combat_dash_side){
 					if seq_cue(){
 						swordPos := pro.transform.pos + {10,-24}
-						camera_tracking_set(spriteEffect_make(sp.proSword_whole, swordPos, duration=INF).transform, offset=stage.target_camera_pos-swordPos)
+						camera_tracking_set(spriteEffect_make(sp.proSword_whole, swordPos, duration=INF).transform._ptr, offset=stage.target_camera_pos-swordPos)
 						audio_play(au.cutsceneSwordKnock)
 						audio_play(au.cutsceneSwordSpinning)
 					}
@@ -703,7 +702,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 			t := 0
 			if seq_cue(&t,60){
 				seq_draw(proc(){
-					draw_rect(0, DISPLAY_SIZE, COLOR_WHITE, seq_map(1,0,cu.easeInStrong))
+					draw_rect_fullscreen(COLOR_WHITE, seq_map(1,0,cu.easeInStrong))
 				})
 			}
 			
@@ -749,7 +748,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 
 					stageCharacter_sprite_set(pro, flag_check("proBladeShattered") ? sp.pro_combat_ko_loop_noSword : sp.pro_combat_ko_loop)
 					
-					camera_tracking_set(minima.transform)
+					camera_tracking_set(minima)
 					camera_update_position()
 					stageCharacter_sprite_set(minima, minima.combatUnit.sprites.idle)
 					scface(minima, .left)
@@ -825,7 +824,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 			if seq_cue(0){
 				ui_highlight(combatUnit_stage_rect(pro), true)
 				cutscene.enabled = false
-				combat.disable_next_turn_button = true
+				combat.disable_external_menus = true
 			}
 
 			if combat.selected_unit == pro{
@@ -872,7 +871,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 			}, [3]int{60,60,60}, .fade, COLOR_WHITE) &&
 			seq_wait(40)
 			{
-				combat.disable_next_turn_button = false
+				combat.disable_external_menus = false
 				combat_end(true)
 				proc_call_delayed(proc(){
 					dialogue_open(di.consequenceEncounter, "proWakesUp")
@@ -905,7 +904,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 						draw_clear(COLOR_BLACK)
 						pro := scfind("pro").transform
 						pro_blade_pal_swap_set()
-						sprite_draw_ex(sp.pro_combatAction_side_slashEffect, pro.pos, sprite_frame_get(sp.pro_combatAction_side_slashEffect, f32(seq_time()-1)), pro.scale)
+						sprite_draw_ex(sp.pro_combatAction_side_slashEffect, pro.pos, sprite_frame_get(sp.pro_combatAction_side_slashEffect, f32(seq_time())), pro.scale)
 						shader_reset()
 					}, useStageCameraPos=true)
 				}
@@ -1007,7 +1006,7 @@ _cutscenes_reload_consequence_encounter :: proc(){
 				{sp.consequence_combatAction_side_gun, 5,proc(){
 					consequence := scfind("consequence")
 					
-					consequence_smoke_bomb_effect(consequence.transform.pos + {30,-37}*consequence.transform.scale, consequence.stageEntity.depth.(f32))
+					consequence_smoke_bomb_effect(consequence.transform.pos + {30,-37}*consequence.transform.scale, consequence.stageEntity.depth)
 					proc_call_delayed(proc(){
 						camera_tracking_set()
 						consequence := scfind("consequence")

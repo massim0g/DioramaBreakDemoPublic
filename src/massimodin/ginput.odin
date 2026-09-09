@@ -144,25 +144,25 @@ ginput_poll_device :: proc(deviceIndex:int, inp:^GInputVerbArray){
 		inp[.rightHeldR] = inp[.rightHeldR] 	|| (rightStickOutsideDeadzoneHorizontal && axes.right.x > 0 /*&& rightStickHorizontalMovement*/) 
 		
 		when ON_SWITCH{
-			confirmButton :: Button.B
-			cancelButton :: Button.A
+			confirmButton :: Button.EAST
+			cancelButton :: Button.SOUTH
 		}
 		else{
-			confirmButton :: Button.A
-			cancelButton :: Button.B
+			confirmButton :: Button.SOUTH
+			cancelButton :: Button.EAST
 		}
 
 		inp[.confirm] = inp[.confirm] 			|| button_pressed(deviceIndex, confirmButton)
 		inp[.confirmHeld] = inp[.confirmHeld] 	|| button_held(deviceIndex, confirmButton)
 		inp[.cancel] = inp[.cancel] 			|| button_pressed(deviceIndex, cancelButton)
 		inp[.cancelHeld] = inp[.cancelHeld] 	|| button_held(deviceIndex, cancelButton)
-		inp[.option] = inp[.option] 			|| button_pressed(deviceIndex, Button.X)
-		inp[.optionHeld] = inp[.optionHeld] 	|| button_held(deviceIndex, Button.X)
-		inp[.extra] = inp[.extra] 				|| button_pressed(deviceIndex, Button.Y)
+		inp[.option] = inp[.option] 			|| button_pressed(deviceIndex, Button.WEST)
+		inp[.optionHeld] = inp[.optionHeld] 	|| button_held(deviceIndex, Button.WEST)
+		inp[.extra] = inp[.extra] 				|| button_pressed(deviceIndex, Button.NORTH)
 		inp[.start] = inp[.start] 				|| button_pressed(deviceIndex, Button.START)
 		inp[.select] = inp[.select] 			|| button_pressed(deviceIndex, Button.BACK)
-		inp[.lb] = inp[.lb] 					|| button_pressed(deviceIndex, Button.LEFTSHOULDER)
-		inp[.rb] = inp[.rb] 					|| button_pressed(deviceIndex, Button.RIGHTSHOULDER)
+		inp[.lb] = inp[.lb] 					|| button_pressed(deviceIndex, Button.LEFT_SHOULDER)
+		inp[.rb] = inp[.rb] 					|| button_pressed(deviceIndex, Button.RIGHT_SHOULDER)
 		inp[.lt] = inp[.lt]						|| axes.lt > GAMEPAD_DEFAULT_TRIGGER_DEADZONE && !leftTriggerPressedLastFrame
 		inp[.rt] = inp[.rt]						|| axes.rt > GAMEPAD_DEFAULT_TRIGGER_DEADZONE && !rightTriggerPressedLastFrame
 		inp[.ltHeld] = inp[.ltHeld]				|| axes.lt > GAMEPAD_DEFAULT_TRIGGER_DEADZONE

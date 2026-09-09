@@ -16,7 +16,8 @@ using self
 #partial switch event{
 case .init:
 
-case .drawEnd:
+case .draw:
+	render_depth_ui(.menus)
 
 	fonts.default = fo.notoSerif__144
 
@@ -63,7 +64,7 @@ case .drawEnd:
 	}
 
 	if quitting{
-		draw_rect(0, display_size(), COLOR_BLACK, alpha=ui_cue_map("languageSelectQuit", 0, TITLE_SCREEN_FADE_TIME, 0, 1))
+		draw_rect_fullscreen(COLOR_BLACK, ui_cue_map("languageSelectQuit", 0, TITLE_SCREEN_FADE_TIME, 0, 1))
 		if ui_cue_time("languageSelectQuit") > TITLE_SCREEN_FADE_TIME{
 			titleScreen_goto()
 		}

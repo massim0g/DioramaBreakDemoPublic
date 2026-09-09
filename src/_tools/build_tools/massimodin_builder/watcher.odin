@@ -94,10 +94,6 @@ watcher_update :: proc(){
 					offset += info.next_entry_offset
 					continue
 				}
-				if strings.has_suffix(fileName, "build_config.json"){
-					config_changed = true
-					printf("build_config.json changed (will prompt on next launch)")
-				}
 			}
 
 			//dedup: one entry per path, last event wins
@@ -145,6 +141,10 @@ watcher_update :: proc(){
 				if p.kind in PIPELINE_PACKED_KINDS{
 					pipelines_block({.packer} + PIPELINE_PACKED_KINDS) //failsafe
 					pipeline_task_dispatch(&pipelines[.packer], false)
+				}
+				if p.kind in PIPELINE_MIRRORED_KINDS && building_other_targets{
+					pipelines_block({.otherTargets} + PIPELINE_MIRRORED_KINDS) //failsafe
+					pipeline_task_dispatch(&pipelines[.otherTargets], false)
 				}
 
 				pipeline_status_set(&p, .idle)

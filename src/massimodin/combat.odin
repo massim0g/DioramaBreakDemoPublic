@@ -69,7 +69,7 @@ CombatSystem :: struct{
 	resolving_action_title:string,
 	resolving_action_title_scale:f32,
 	cues:UICueMap,
-	disable_next_turn_button:bool, //mainly for tutorial
+	disable_external_menus:bool, //for allowing the player to interact with the combat UI while disabling the pause menu and next turn button. Mainly for tutorials.
 	resolving_ui_disable:bool, //mainly for footage capture
 	gamepad_cursor_pos:Vec2, //relative to the grid
 	gamepad_cursor_alpha:f32,
@@ -156,12 +156,10 @@ _combat_system_init :: proc(){
 	
 	combat.aiming_ring_mask_tex = tex_make(texSize)
 	combat.grid_tex_alpha_mask = tex_make(texSize)
-	tex_blendmode_set(combat.grid_tex_alpha_mask, .subtractInverse)
 
 	combat.time_stop_transition_bg = tex_make(DISPLAY_SIZE)
 	combat.time_stop_transition_maskA = tex_make(DISPLAY_SIZE)
 	combat.time_stop_transition_maskB = tex_make(DISPLAY_SIZE)
-	tex_blendmode_set(combat.time_stop_transition_maskB, .subtract)
 
 	combat.movement_ring_colors = [COMBAT_RESOLVE_INTERVAL]Color{
 		// color_hex(0x60bf30), 
@@ -230,21 +228,19 @@ _combat_system_reload :: proc(){
 		// 	}
 		// }
 		
-		draw_color(COLOR_BLACK)
 		for y:f32=0;y<texSize.y;y+=COMBAT_TILE_SIZE.y{
-			draw_line(0, y, texSize.x, y)
+			draw_line(0, y, texSize.x, y, color=COLOR_BLACK)
 		}
 		for x:f32=0;x<texSize.x;x+=COMBAT_TILE_SIZE.x{
-			draw_line(x, 0, x, texSize.y)
+			draw_line(x, 0, x, texSize.y, color=COLOR_BLACK)
 		}
 
-		draw_color(COLOR_WHITE)
 		for y:f32=COMBAT_TILE_SIZE.y-1;y<texSize.y;y+=COMBAT_TILE_SIZE.y{
-			draw_line(0, y, texSize.x, y)
+			draw_line(0, y, texSize.x, y, color=COLOR_WHITE)
 		}
 		for x:f32=COMBAT_TILE_SIZE.x-1;x<texSize.x;x+=COMBAT_TILE_SIZE.x{
 			rightX := x+COMBAT_TILE_SIZE.x-1
-			draw_line(x, 0, x, texSize.y)
+			draw_line(x, 0, x, texSize.y, color=COLOR_WHITE)
 		}
 
 	tex_target_clear()
@@ -619,7 +615,7 @@ _combat_update :: proc(){
 
 			//pause menu
 			if entity_exists(PauseMenu) do return
-			if ginputs[.start]{
+			if ginputs[.start] && !combat.disable_external_menus{
 				entity_make(PauseMenu)
 				return
 			}
@@ -775,11 +771,11 @@ _combat_update :: proc(){
 	
 					resolveHoverCheckE := COMBAT_RESOLVE_ELLIPSE
 					resolveHoverCheckE.radii /= 2
-					hoveringResolveButton = ellipse_contains(resolveHoverCheckE, mouse_display_pos()) && !combat.disable_next_turn_button
+					hoveringResolveButton = ellipse_contains(resolveHoverCheckE, mouse_display_pos()) && !combat.disable_external_menus
 					if hoveringResolveButton do ui_cue("resolveButtonHover")
 				}
 
-				if !combat.disable_next_turn_button && ((hoveringResolveButton && ginputs[.confirm]) || ginputs[.rt] || key_pressed(.TAB)){
+				if !combat.disable_external_menus && ((hoveringResolveButton && ginputs[.confirm]) || ginputs[.rt] || key_pressed(.TAB)){
 					combat_resolve_start()
 					combat_event_process(CombatEventPlanningEnded{})
 				}

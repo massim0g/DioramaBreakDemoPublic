@@ -49,6 +49,16 @@ _ui_system_reload :: proc(){
 	}
 }
 
+UILayer :: enum{
+	stageEditor,
+	combatUI,
+	seqDraws,
+	misc,
+	dialogue,
+	menus,
+	top
+}
+
 UICue :: struct{
 	lastStartFrame:int,
 	lastUpdatedFrame:int,
@@ -103,6 +113,10 @@ UIMenu :: struct{
 
 PlayerCharacterIcons :: struct{
 	portrait:^Sprite
+}
+
+ui_layer_depth :: #force_inline proc "contextless" (layer:UILayer) -> f32{
+	return layer_depth(.ui) - f32(layer)*100 
 }
 
 ui_frame :: #force_inline proc() -> ^UIFrame{ //returns the current ui frame
@@ -189,7 +203,7 @@ ui_sprite :: proc(spr:^Sprite, frameIndex:=0, colors:[3]Color=COLOR_WHITE, alpha
 	return out.interactState == .selected
 }
 
-ui_text :: proc(text:string, colors:[3]Color=COLOR_WHITE, alphas:[3]f32=1, alignment:Alignment=-1, selected:bool=false, mouseHoverSticky:=false, fullState:^UIItemState=nil) -> bool{
+ui_text :: proc(text:string, colors:[3]Color=COLOR_WHITE, alphas:[3]f32=1, alignment:Alignment=-1, selected:bool=false, mouseHoverSticky:=false, fullState:^UIItemState=nil, dropShadow:Maybe(Color)=nil) -> bool{
 	cursor := ui_cursor()
 	cursorPos := cursor^
 	r := text_rect(text, cursorPos, alignment)
@@ -199,6 +213,9 @@ ui_text :: proc(text:string, colors:[3]Color=COLOR_WHITE, alphas:[3]f32=1, align
 	blendInd := 0
 	if selected do blendInd = 2
 	else if out.interactState == .hovered do blendInd = 1
+	if dsc,ok := dropShadow.(Color); ok{
+		text_draw(text, cursorPos+1, dsc, alphas[blendInd], nil, alignment)
+	}
 	text_draw(text, cursorPos, colors[blendInd], alphas[blendInd], nil, alignment)
 
 	if fullState != nil do fullState^=out
@@ -464,9 +481,9 @@ _ui_system_draw :: proc(){
 	//highlight
 	travelTime :: 6
 	drawRect:Rect
-	target,ok := ui.highlight_box_target.(Rect)
+	target,targetSet := ui.highlight_box_target.(Rect)
 	
-	if !ok do target = Rect{0,DISPLAY_SIZE}
+	if !targetSet do target = Rect{-1,DISPLAY_SIZE+2}
 
 	drawRect = Rect{
 		ui_cue_map("highlightBox", 0, travelTime, ui.highlight_box_current.pos, target.pos),
@@ -478,7 +495,7 @@ _ui_system_draw :: proc(){
 	if ui.highlight_box_stage_coords do drawRect.pos -= stage_camera_pos()
 
 	if !display.hd_enabled{
-		draw_letterbox(drawRect, COLOR_BLACK, 0.667)
+		if targetSet || drawRect != target do draw_letterbox(drawRect, COLOR_BLACK, 0.667)
 		
 		//save indicator
 		dur :: 60

@@ -1,7 +1,7 @@
 package massimodin //@nested-tags:engine/visuals
 
 import "core:reflect"
-import gl "vendor:OpenGL"
+import "../sdl3"
 
 SDFShape :: union{ //ENSURE TAG INDEX MATCHES IN SDF SHADER
 	Circle
@@ -58,30 +58,24 @@ sdf_trace_contour :: proc(startPos:Vec2, shapes:[]SDFShape, k:f32, precision:f32
 	return out[:]
 }
 
-//if you need to make multiple calls to this at once, it's recommended that you set the sdf shader outside of the proc call
+//Draws sdf shapes as a quad shaded by the sdf shader. Shape positions are relative to the passed offset, in target pixels.
 sdf_draw :: proc(shapes:[]SDFShape, k:f32, color:=COLOR_WHITE, alpha:f32=1, offset:=Vec2{}){
-	camPos := camera_pos()
-	shaderActive := shader_get() == sh.sdf
-	if !shaderActive do shader_set(sh.sdf)
-	shader_uniform_set(sh.sdf, "offset", camPos-offset)
-	shader_uniform_set(sh.sdf, "k", k)
+	first := i32(len(render._sdf_shapes))
+	boundsMin:Vec2 = INF
+	boundsMax:Vec2 = -INF
+	for shape in shapes{
+		data := (cast(^[4]f32)(reflect.get_union_variant(shape).data))^
+		data.w = f32(reflect.get_union_variant_raw_tag(shape))
+		append(&render._sdf_shapes, data)
 
-	shapeCount := i32(len(shapes))
-	assertf(shapeCount<=64, "sdf_draw shape count '%i' is above the maximum the shader can handle (64)! Increase the limit or reduce shapes drawn.", shapeCount)
-	shader_uniform_set(sh.sdf, "shapeCount", shapeCount)
-	shapeTags := make([dynamic]i32, shapeCount, context.temp_allocator)
-	shapeData := make([dynamic][4]f32, shapeCount, context.temp_allocator)
-	for shape,i in shapes{
-		shapeTags[i] = i32(reflect.get_union_variant_raw_tag(shape))
-		shapeData[i] = (cast(^[4]f32)(reflect.get_union_variant(shape).data))^
+		boundsMin = min(boundsMin, Vec2{data.x, data.y} - data.z)
+		boundsMax = max(boundsMax, Vec2{data.x, data.y} + data.z)
 	}
-	gl.Uniform1iv(shader_uniform_loc(sh.sdf, "shapeTags"), shapeCount, &shapeTags[0])
-	gl.Uniform4fv(shader_uniform_loc(sh.sdf, "shapes"), shapeCount, &shapeData[0].x)
 
-	@(static) drawTex:Tex
-	targetSize := tex_target_get().size
-	if drawTex.ptr == nil do drawTex = tex_make(targetSize)
-	else if drawTex.size != targetSize do tex_resize(&drawTex, targetSize)
-	tex_draw_ex(drawTex, camPos, color=color, alpha=alpha) //we don't actually sample the drawTex, we just need to draw something the same size as the target
-	if !shaderActive do shader_reset()
+	pad := k + 1
+	rect := Rect{boundsMin + offset - pad, boundsMax - boundsMin + pad*2}
+	shader_set(Sh_Sdf{rect.pos, rect.size, -offset, k, first, i32(len(shapes))})
+	shader_buffer_bind("sdfShapes", &render._sdf_shape_buffer)
+	draw_rect(rect, color, alpha)
+	shader_reset()
 }

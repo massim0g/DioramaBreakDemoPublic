@@ -11,7 +11,7 @@ Transition :: struct{
 	durations:TransitionDuration,
 	direction:Dir,
 	useAddFade:bool,
-	drawEnd:bool
+	drawOnTop:bool
 }
 
 TransitionKind :: enum{
@@ -26,21 +26,21 @@ TransitionKind :: enum{
 
 TransitionDuration :: union{int,[3]int}
 
-transition_make :: proc(onMid:=Callback{}, duration:TransitionDuration=30, kind:=TransitionKind.fade, color:=COLOR_BLACK, drawEnd:=false, dir:=Dir.right) -> ^Transition{
+transition_make :: proc(onMid:=Callback{}, duration:TransitionDuration=30, kind:=TransitionKind.fade, color:=COLOR_BLACK, drawOnTop:=false, dir:=Dir.right) -> ^Transition{
 	tr := entity_make(Transition)
 	tr.onMid = onMid
 	tr.durations = duration
 	tr.kind = kind
 	tr.color = color
-	tr.drawEnd = drawEnd
+	tr.drawOnTop = drawOnTop
 	tr.direction = dir
 	return tr
 }
-transition_seq :: proc(onMid:=Callback{}, duration:TransitionDuration=30, kind:=TransitionKind.fade, color:=COLOR_BLACK, drawEnd:=false, dir:=Dir.right, key:ImKey=#caller_location) -> bool{
+transition_seq :: proc(onMid:=Callback{}, duration:TransitionDuration=30, kind:=TransitionKind.fade, color:=COLOR_BLACK, drawOnTop:=false, dir:=Dir.right, key:ImKey=#caller_location) -> bool{
 	done:^bool
 	if seq_open(&done, key){
 		if seq_cue(0){
-			tr := transition_make(onMid, duration, kind, color, drawEnd, dir)
+			tr := transition_make(onMid, duration, kind, color, drawOnTop, dir)
 			tr.done = done
 		}
 
@@ -61,7 +61,7 @@ using self
 case .init:
 	blendmode = .blend
 	entity_persistent_set(entity, true)
-	depth = -DEPTH_MAX
+	depth = layer_depth(.stageTop) - 1
 	durations = 30
 	useAddFade = true
 	
@@ -179,7 +179,6 @@ case .update:
 			seq_close()
 		case .wipe: 
 			duration := durations.(int)
-			alpha = 1
 			seq_open("wipeTransition")
 			if seq_cue(duration/2) do callback_call(onMid)
 			if seq_cue(duration) {
@@ -189,10 +188,8 @@ case .update:
 			seq_close()
 	}
 
-case .draw: 
-	fallthrough
-case .drawEnd:
-	if (drawEnd && event == .draw) || (!drawEnd && event == .drawEnd) do return
+case .draw:
+	if drawOnTop do render_depth_ui(.top)
 	switch kind{
 		case .fade, .hardCut, .hardCutToFade, .combatStart, .timestopStart, .timestopEnd:
 			if useAddFade && alpha != 1{
@@ -201,9 +198,7 @@ case .drawEnd:
 				shader_reset()
 			}
 			else{
-				camera_set({0,0})
-				draw_rect(Vec2{0,0}, display_size(), color, alpha)
-				camera_reset()
+				draw_rect_fullscreen(color, alpha)
 			}
 		case .wipe:
 			duration := durations.(int)
@@ -211,60 +206,63 @@ case .drawEnd:
 			wipeWidth := sp.wipeTransition.size.x
 			minPos := -wipeWidth
 			maxPos := ds + wipeWidth
+			alpha = 1
+			blendmode_set(blendmode)
 			seq_open("wipeTransition")
 				switch direction{
 					case .none: //do nothing
 					case .right:
 						if seq_cue(0, duration/2){
 							x := seq_map(minPos, ds.x)
-							sprite_draw_ex(sp.wipeTransition, x, 0, 0, 1, 0, color, alpha, blendmode)
-							draw_rect(minPos,0,x, ds.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, x, 0, 0, 1, 0, color, alpha)
+							draw_rect(minPos,0,x, ds.y, color, alpha)
 						}
 						
 						if seq_cue(duration/2, duration){
 							x := seq_map(0, maxPos.x)
-							sprite_draw_ex(sp.wipeTransition, x, 0, 0, Vec2{-1,1}, 0, color, alpha, blendmode)
-							draw_rect(x, 0, maxPos.x, ds.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, x, 0, 0, Vec2{-1,1}, 0, color, alpha)
+							draw_rect(x, 0, maxPos.x, ds.y, color, alpha)
 						}
 					case .left:
 						if seq_cue(0, duration/2){
 							x := seq_map(maxPos.x, 0)
-							sprite_draw_ex(sp.wipeTransition, x, 0, 0, Vec2{-1,1}, 0, color, alpha, blendmode)
-							draw_rect(x, 0, maxPos.x, ds.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, x, 0, 0, Vec2{-1,1}, 0, color, alpha)
+							draw_rect(x, 0, maxPos.x, ds.y, color, alpha)
 						}
 						
 						if seq_cue(duration/2, duration){
 							x:=seq_map(ds.x, minPos)
-							sprite_draw_ex(sp.wipeTransition, x, 0, 0, 1, 0, color, alpha, blendmode)
-							draw_rect(minPos, 0, x, ds.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, x, 0, 0, 1, 0, color, alpha)
+							draw_rect(minPos, 0, x, ds.y, color, alpha)
 							
 						}
 					case .up:
 						if seq_cue(0, duration/2){
 							y := seq_map(maxPos.y, 0)
-							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{1, 480./270.}, 90, color, alpha, blendmode)
-							draw_rect(0, y, ds.x, maxPos.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{1, 480./270.}, 90, color, alpha)
+							draw_rect(0, y, ds.x, maxPos.y, color, alpha)
 						}
 						
 						if seq_cue(duration/2, duration){
 							y := seq_map(ds.y, minPos)
-							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{-1,480./270.}, 90, color, alpha, blendmode)
-							draw_rect(0, minPos, ds.x, y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{-1,480./270.}, 90, color, alpha)
+							draw_rect(0, minPos, ds.x, y, color, alpha)
 						}
 					case .down:
 						if seq_cue(0, duration/2){
 							y := seq_map(minPos, ds.y)
-							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{1,-1}, 90, color, alpha, blendmode)
-							draw_rect(0, minPos, ds.x, y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, 0, y, 0, Vec2{1,-1}, 90, color, alpha)
+							draw_rect(0, minPos, ds.x, y, color, alpha)
 						}
 						
 						if seq_cue(duration/2, duration){
 							y:=seq_map(0, maxPos.y)
-							sprite_draw_ex(sp.wipeTransition, 0, y, 0, 1, 90, color, alpha, blendmode)
-							draw_rect(0, y, ds.x, maxPos.y, color, alpha, blendmode)
+							sprite_draw_ex(sp.wipeTransition, 0, y, 0, 1, 90, color, alpha)
+							draw_rect(0, y, ds.x, maxPos.y, color, alpha)
 						}
 				}
 			seq_close(.pause)
+			blendmode_set(.blend)
 	}
 
 }}

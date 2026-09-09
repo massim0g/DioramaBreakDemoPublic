@@ -41,6 +41,7 @@ PipelineKind :: enum{
 	code,
 	libs,
 	packer,
+	otherTargets, //non-windows targets, handles mirroring build artifacts from the _win64 output directory, which always gets built.
 }
 PipelineKinds :: bit_set[PipelineKind]
 

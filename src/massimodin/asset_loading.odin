@@ -4,7 +4,8 @@ System for unpacking small assets that get loaded into RAM at game start.
 NOT INTENDED for assets that are potentially too big, and are loaded from disk after the game has started, such as audio.
 */
 
-import "../sdl2"
+import "../sdl3"
+import "../shadercross"
 import "core:image"
 import "core:image/qoi"
 import "core:os"
@@ -15,7 +16,6 @@ import "core:c"
 import "core:slice"
 import "core:reflect"
 import "base:runtime"
-import gl "vendor:OpenGL"
 import "core:mem"
 import fm "../fmod/studio"
 
@@ -206,9 +206,35 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 
 	TexturePageLoadState :: enum{
 		unloaded,
-		loadingSurface,
-		loadingTexture,
+		loading,
 		loaded
+	}
+
+	//Creates a page texture, with a mip chain for HD pages.
+	/*
+	Mip cap: 0 means the full chain.
+	Capping it is the single knob that makes reduced-resolution atlas pages possible later without touching uvs, because sprite rects stay in virtual page space.
+	*/
+	TEXTURE_PAGE_MIP_CAP :: 0
+
+	_texture_page_texture_make :: proc(size:u32, hd:bool, mipCap:u32=TEXTURE_PAGE_MIP_CAP) -> ^sdl3.GPUTexture{
+		levels:u32 = 1
+		usage:sdl3.GPUTextureUsageFlags = {.SAMPLER}
+		if hd{
+			s := size
+			for s > 1{
+				levels += 1
+				s >>= 1
+			}
+			if mipCap > 0 do levels = min(levels, mipCap)
+			usage += {.COLOR_TARGET} //GenerateMipmapsForGPUTexture blits down the chain, which requires render-target usage
+		}
+		tex := sdl3.CreateGPUTexture(render.device, {
+			type=.D2, format=TEXTURE_FORMAT_DEFAULT, usage=usage,
+			width=size, height=size, layer_count_or_depth=1, num_levels=levels,
+		})
+		assertf(tex != nil, "Texture page creation failed (%d, hd=%v)! %s", size, hd, sdl3.GetError())
+		return tex
 	}
 
 	TexturePageLoadTask :: struct{
@@ -235,11 +261,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			return
 		}
 		if atomic_get(&group.loadState) == .unloaded{
-			atomic_set(&group.loadState, .loadingSurface)
-			for &page in group.pages{
-				page.texture = sdl2.CreateTexture(display._renderer, u32(sdl2.PixelFormatEnum.ABGR8888), .STATIC, page.size, page.size)
-				sdl2.SetTextureBlendMode(page.texture, .BLEND)
-			}
+			atomic_set(&group.loadState, .loading)
 			thread_task_run_with_data(rawptr(group), _texture_group_load_task)
 		}
 	}
@@ -250,31 +272,28 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		if !ok do return
 		switch atomic_get(&group.loadState){
 			case .unloaded: return
-			case .loadingSurface: texture_group_load_block(groupName) //failsafe
-			case .loadingTexture, .loaded: //do nothing
+			case .loading: texture_group_load_block(groupName) //failsafe
+			case .loaded: //do nothing
 		}
 
 		//non-threaded, free all allocators surfaces and textures and set all sprite page pointers to the nil page
 		for &page in group.pages{
 			for frame in page.spriteFrames{
-				frame.texturePage = sprites._texture_page_nil
-				frame.texturePageSurface = sprites._texture_page_surface_nil
+				frame.texturePage = &sprites._texture_page_nil
 			}
 
-			sdl2.DestroyTexture(page.texture)
+			tex_destroy({ptr=page.texture}) //defers release of texture until after all draws complete
 			page.texture = nil
-			sdl2.FreeSurface(page.surface)
+			sdl3.DestroySurface(page.surface)
 			page.surface = nil
 
 			free_all(page.loadAllocator)
-			free_all(page.loadTempAllocator)
-			page.textureRowsLoaded = 0
 		}
 
 		atomic_set(&group.loadState, .unloaded)
 	}
 
-	//Waits until texture groups are done loading. Does all main-thread texture loading on the spot if needed. 
+	//Waits until texture groups are done loading. The loader task does all the work, so this only spins.
 	texture_group_load_block :: proc(groupNames:..string){
 		trace("texture load block")
 		for{
@@ -286,13 +305,10 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 					continue
 				}
 				switch atomic_get(&group.loadState){
-					case .unloaded: 
+					case .unloaded:
 						texture_group_preload(name)
 						done=false
-					case .loadingSurface: done=false
-					case .loadingTexture:
-						_texture_group_texture_load_chunk(group, -1)
-						atomic_set(&group.loadState, .loaded)
+					case .loading: done=false
 					case .loaded: //do nothing
 				}
 			}
@@ -321,97 +337,60 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 
 		reader := uintptr(raw_data(fileData))
 		for &page in group.pages{
-			//create the surface here so sprites can be pointed to it before its pixel data is ready. 
-			//The "From" variant marks the pixels as externally owned, so FreeSurface won't free the decode allocation the task points it at
-			page.surface = sdl2.CreateRGBSurfaceWithFormatFrom(nil, page.size, page.size, 32, page.size*4, u32(sdl2.PixelFormatEnum.ABGR8888))
-			sdl2.SetSurfaceBlendMode(page.surface, .NONE)
+			/*
+			Create the texture and surface here so sprites can be pointed at them before the pixel data is ready.
+			The "From" surface variant marks the pixels as externally owned, so DestroySurface won't free the decode allocation the task points it at.
+			HD pages never get a surface: nothing reads their pixels back on the CPU, and keeping one just wastes the RAM.
+			*/
+			page.texture = _texture_page_texture_make(u32(page.size), group.hd)
+			if !group.hd{
+				page.surface = sdl3.CreateSurfaceFrom(i32(page.size), i32(page.size), .ABGR8888, nil, i32(page.size)*4)
+				sdl3.SetSurfaceBlendMode(page.surface, sdl3.BLENDMODE_NONE)
+			}
 
 			qoiSize := uintptr(read_bytes(&reader, u64))
 			taskData := new(TexturePageLoadTask)
 			taskData^ = {group, &page, bytes_from_uip(reader, qoiSize)}
 			reader += qoiSize
-			thread_pool_add_task(&pool, _texture_page_load_task, taskData, page.loadTempAllocator)
+			thread_pool_add_task(&pool, _texture_page_load_task, taskData, panic_allocator())
 		}
 
-		//update sprites to point to the correct texture and surface
+		//update sprites to point to the correct page
 		for &page in group.pages{
 			for frame in page.spriteFrames{
-				frame.texturePage = page.texture
-				if !group.isHD do frame.texturePageSurface = page.surface
+				frame.texturePage = &page
 			}
 		}
 
 		//finish pool
 		thread_pool_finish(&pool)
 
-
-		atomic_set(&group.loadState, .loadingTexture)
+		atomic_set(&group.loadState, .loaded)
 	}
 
+	//Decodes AND uploads a page, entirely off the main thread.
 	_texture_page_load_task :: proc(task:ThreadTask){
 		data := cast(^TexturePageLoadTask)task.data
 
 		context.allocator = data.page.loadAllocator
-		context.temp_allocator = data.page.loadTempAllocator
+		context.temp_allocator = allocator_make()
+		defer allocator_delete(context.temp_allocator)
 
-		img, imgErr := qoi.load_from_bytes(data.qoiData, allocator=data.group.isHD?context.temp_allocator:context.allocator)
+		img, imgErr := qoi.load_from_bytes(data.qoiData, allocator=data.group.hd?context.temp_allocator:context.allocator)
 		assertf(imgErr == nil, "Failed to decode a page of texture group '%s'! %v", data.group.name, imgErr)
-		assertf(i32(img.width) == data.page.size, "A decoded page of texture group '%s' doesn't match its index size!", data.group.name)
+		assertf(img.width == int(data.page.size), "A decoded page of texture group '%s' doesn't match its index size!", data.group.name)
 
-		data.page.surface.pixels = raw_data(img.pixels.buf)
-	}
+		if !data.group.hd do data.page.surface.pixels = raw_data(img.pixels.buf)
 
-	//Pass a negative chunk size to load everything immediately
-	_texture_group_texture_load_chunk :: proc(group:^TextureGroup, chunkSize:i32=MEGABYTE) -> bool{
-		for &page in group.pages{
-			if page.textureRowsLoaded == page.size do continue
-
-			rowsToLoad := chunkSize < 0 ? page.size - page.textureRowsLoaded : clamp(chunkSize/(page.size*4), 1, page.size - page.textureRowsLoaded)
-			rect := sdl2.Rect{0, page.textureRowsLoaded, page.size, rowsToLoad}
-			pixels := rawptr(uintptr(page.surface.pixels) + uintptr(page.textureRowsLoaded*page.surface.pitch))
-			sdl2.UpdateTexture(page.texture, &rect, pixels, page.surface.pitch)
-			
-			page.textureRowsLoaded += rowsToLoad
-			if page.textureRowsLoaded < page.size do return false
-
-			if group.isHD{
-				_texture_mipmaps_generate(page.texture)
-
-				//the surface was only staging for the upload, drop it to save RAM
-				sdl2.FreeSurface(page.surface)
-				page.surface = nil
-			}
-			free_all(page.loadTempAllocator)
-		}
-		return true
-	}
-
-	@export //needs to be called from main loop to get time budget
-	_texture_groups_textures_async_load :: proc(timeBudget:f32){
-		startT := time_get()
-		groups := make([dynamic]^TextureGroup, 0, len(sprites._texture_groups_map), context.temp_allocator)
-		for _,&group in sprites._texture_groups_map{
-			if atomic_get(&group.loadState) == .loadingTexture do append(&groups, &group)
-		}
-
-		if len(groups) == 0 do return
-
-		for{
-			group := peek(groups)
-			if _texture_group_texture_load_chunk(group){
-				atomic_set(&group.loadState, .loaded)
-				pop(&groups)
-				if len(groups) == 0 do return
-			}
-			if time_get() - startT >= timeBudget do return
-		}
+		//upload the whole page right here on the loader thread, HD pages get their mip chain in the same command buffer
+		texture_upload(data.page.texture, img.pixels.buf[:], int(data.page.size), generateMipsAfter=data.group.hd)
 	}
 
 	//also starts preloading textures
 	_texture_groups_index_file_load :: proc(){
 		context.allocator = assets.allocator
 
-		palettesSurf:^sdl2.Surface
+		palettesSurf:^sdl3.Surface
 		paletteSpriteNames := make([dynamic]string, context.temp_allocator)
 
 		path, _ := filepath.join({executable_directory, "texture_groups/.index"}, context.temp_allocator)
@@ -430,7 +409,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			clonedName := strmap_set(&sprites._texture_groups_map, name, TextureGroup{})
 			group := &sprites._texture_groups_map[clonedName]
 			group.name = clonedName
-			group.isHD = string_has_suffix(clonedName, "_HD")
+			group.hd = string_has_suffix(clonedName, "_HD")
 			if !contains(TEXTURE_GROUPS_PERMANENT, clonedName) do append(&sprites.texture_groups_dynamic, clonedName)
 
 			if dataLen == 0 do continue
@@ -456,33 +435,40 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		texture_group_load_block("_palettes")
 		palettesGroup, palettesOk := &sprites._texture_groups_map["_palettes"]
 		assert(palettesOk && len(palettesGroup.pages) > 0, "Palettes texture group is missing or empty!")
+
+		palettesPackedData := make([dynamic]u32, context.temp_allocator)
+
 		palettesSurf = palettesGroup.pages[0].surface
-		sdl2.LockSurface(palettesSurf)
-		format := palettesSurf.format
+		sdl3.LockSurface(palettesSurf)
+
+		formatDetails := sdl3.GetPixelFormatDetails(palettesSurf.format)
 		pixels := uintptr(palettesSurf.pixels)
 		pitch := uintptr(palettesSurf.pitch)
-		bpp := int(format.BytesPerPixel)
+		bpp := int(formatDetails.bytes_per_pixel)
 		bppUip := uintptr(bpp)
+
 		for name in paletteSpriteNames{
 			sprite := &sprites._sprites_map[name]
 			pageRect := sprite.frames[0].texturePagePos
-			size := Vec2i{int(pageRect.w), int(pageRect.h)}
-			shaders._pal_swap_sprite_map[sprite] = PalSwapData{size, make([dynamic][3]f32, 0, size.x*size.y)}
-			colors := &(&shaders._pal_swap_sprite_map[sprite]).colors
+			pagePos := Vec2i(pageRect.pos)
+			size := Vec2i(pageRect.size)
+			render._pal_swap_sprite_map[sprite] = PalSwapData{size, i32(len(palettesPackedData))}
 
-			for x in pageRect.x..<pageRect.x+pageRect.w{
-				for y in pageRect.y..<pageRect.y+pageRect.h{
+			for x in pagePos.x..<pagePos.x+size.x{
+				for y in pagePos.y..<pagePos.y+size.y{
 					pixelData:u32
 					mem.copy(&pixelData, rawptr(pixels + uintptr(x)*bppUip + uintptr(y)*pitch), bpp)
-					pixelCol:Color
-					sdl2.GetRGB(pixelData, format, &pixelCol.r, &pixelCol.g, &pixelCol.b)
-					append(colors, ColorF(pixelCol)*(1./255.))
+					c:Color
+					sdl3.GetRGB(pixelData, formatDetails, nil, &c.r, &c.g, &c.b)
+					append(&palettesPackedData, u32(c.r) | u32(c.g)<<8 | u32(c.b)<<16)
 				}
 			}
 
 		}
+		sdl3.UnlockSurface(palettesSurf)
 
-		sdl2.UnlockSurface(palettesSurf)
+		gpu_dynamic_buffer_reserve(&render._palettes_buffer, len(palettesPackedData)*size_of(u32))
+		gpu_buffer_upload(render._palettes_buffer.buf.(^sdl3.GPUBuffer), slice_to_bytes(palettesPackedData[:]))
 	}
 
 
@@ -506,7 +492,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			size   := read_bytes(&reader, [2]u16)
 			origin := read_bytes(&reader, [2]i16)
 			newSprite.size = Vec2(size)
-			newSprite.origin = {i32(origin.x), i32(origin.y)}
+			newSprite.origin = {f32(origin.x), f32(origin.y)}
 
 			// mask block
 			maskKind := read_bytes(&reader, u8)
@@ -535,16 +521,16 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 				framePos += frame.duration
 
 				frame.trimOffset = {
-					i32(read_bytes(&reader, i16)),
-					i32(read_bytes(&reader, i16))
+					f32(read_bytes(&reader, i16)),
+					f32(read_bytes(&reader, i16))
 				}
 
-				frame.texturePagePos.w = i32(read_bytes(&reader, u16))
-				frame.texturePagePos.h = i32(read_bytes(&reader, u16))
-				frame.texturePagePos.x = i32(read_bytes(&reader, u16))
-				frame.texturePagePos.y = i32(read_bytes(&reader, u16))
-				frame.texturePage = sprites._texture_page_nil
-				frame.texturePageSurface = sprites._texture_page_surface_nil
+				//the pack stores u16 components in w/h/x/y order
+				frame.texturePagePos.size.x = f32(read_bytes(&reader, u16))
+				frame.texturePagePos.size.y = f32(read_bytes(&reader, u16))
+				frame.texturePagePos.pos.x = f32(read_bytes(&reader, u16))
+				frame.texturePagePos.pos.y = f32(read_bytes(&reader, u16))
+				frame.texturePage = &sprites._texture_page_nil
 				pageInd := int(read_bytes(&reader, u8))
 				for len(pageFrames) <= pageInd do append(&pageFrames, make([dynamic]^SpriteFrame))
 				append(&pageFrames[pageInd], &frame)
@@ -565,8 +551,8 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			group.pages[i] = TexturePage{
 				spriteFrames=frameArr[:],
 				loadAllocator=allocator_make(),
-				loadTempAllocator=allocator_make(),
-				size=pageSize
+				size=f32(pageSize),
+				hd=group.hd
 			}
 		}
 
@@ -579,39 +565,36 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		_asset_add_to_file_tree(s, parentPath, sprites.file_tree)
 	}
 
+	/*
+	Builds the collider mask debug overlays.
+	Pixels are laid out on the CPU and uploaded to a GPU texture.
+	*/
 	@(disabled=!DEBUG)
 	_sprite_masks_load_debug_textures :: proc(){
 		if sprites._debug_mask_textures_loaded do return
 
-		maskCol :: Color{223, 113, 38}
-		draw_color(maskCol)
+		maskBlend :: Blend{223, 113, 38, 255}
 
 		for _,&spr in sprites._sprites_map{
-			if spr.mask != nil && spr.mask.size != 0{
-				spr.mask.debugTex = tex_make(spr.mask.size)
-				if len(spr.mask.precisePoints) > 0{
-					tex_target_set_stackless(spr.mask.debugTex)
-					draw_clear(COLOR_WHITE, 0)
-					for p in spr.mask.precisePoints{
-						sdl2.RenderDrawPoint(display._renderer, i32(p.x), i32(p.y))
-					}
-				}
-				else{
-					tex_target_set_stackless(spr.mask.debugTex)
-					draw_clear(maskCol, 255)
+			if spr.mask == nil || spr.mask.size == 0 do continue
+
+			size := spr.mask.size
+			pixels := make([]Blend, size.x*size.y, context.temp_allocator)
+
+			if len(spr.mask.precisePoints) > 0{
+				for p in spr.mask.precisePoints{
+					x, y := int(p.x), int(p.y)
+					if x < 0 || y < 0 || x >= size.x || y >= size.y do continue
+					pixels[y*size.x + x] = maskBlend
 				}
 			}
+			else{
+				for &p in pixels do p = maskBlend
+			}
+
+			spr.mask.debugTex = Tex{texture_make_from_pixels(slice.to_bytes(pixels), size), size, false}
 		}
 		sprites._debug_mask_textures_loaded = true
-	}
-
-	//Generates real GPU mipmaps for a texture through direct OpenGL calls. 
-	//Mainly just for HD texture pages. Reduced performance modes draw into smaller targets, and the GPU picks the fitting mip level per draw.
-	_texture_mipmaps_generate :: proc(texture:^sdl2.Texture){
-		sdl2.GL_BindTexture(texture, nil, nil)
-		gl.GenerateMipmap(gl.TEXTURE_2D)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-		sdl2.GL_UnbindTexture(texture)
 	}
 
 	//data is [u32 pageSize][u32 indexSize][index data][raw ABGR8888 page pixels]
@@ -627,14 +610,17 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 
 		//upload the hot page. Old hot pages are kept, sprites from earlier reloads may still point to them.
 		imageData := clone(bytes_from_uip(r, uintptr(pageSize*pageSize*4)))
-		surf := sdl2.CreateRGBSurfaceWithFormatFrom(raw_data(imageData), pageSize, pageSize, 32, pageSize*4, u32(sdl2.PixelFormatEnum.ABGR8888))
-		texture := sdl2.CreateTextureFromSurface(display._renderer, surf)
+		page := new(TexturePage, assets.allocator)
+		page^ = TexturePage{
+			texture = texture_make_from_pixels(imageData, {int(pageSize), int(pageSize)}),
+			size = f32(pageSize),
+			surface = sdl3.CreateSurfaceFrom(pageSize, pageSize, .ABGR8888, raw_data(imageData), pageSize*4),
+		}
 
 		//point the reloaded sprites at the hot page instead of their normal texture pages, which are never hot reloaded
 		frames := _texture_group_index_load("", indexData)
 		for frame in frames{
-			frame.texturePage = texture
-			frame.texturePageSurface = surf
+			frame.texturePage = page
 		}
 	}
 
@@ -651,10 +637,8 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		strmap_set(&fonts._pages, pageName, FontPage{})
 		page := &fonts._pages[pageName]
 
-		page.texture = sdl2.CreateTexture(display._renderer, u32(sdl2.PixelFormatEnum.ABGR8888), .STATIC, FONT_PAGE_SIZE, FONT_PAGE_SIZE)
-		sdl2.SetTextureBlendMode(page.texture, .BLEND)
-		page.loadTempAllocator = allocator_make()
-		page.isHD = string_has_suffix(pageName, "_HD")
+		page.hd = string_has_suffix(pageName, "_HD")
+		page.texture = _texture_page_texture_make(FONT_PAGE_SIZE, page.hd)
 
 		reader := uintptr(raw_data(indexFileData))
 		eof := reader + uintptr(len(indexFileData))
@@ -680,16 +664,15 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			newFont.size = size
 			newFont.sizelessName = sizelessName
 			newFont.page = page.texture
-			newFont.runeMap = make(map[rune]sdl2.Rect)
+			newFont.pageHD = page.hd
+			newFont.runeMap = make(map[rune]Rect)
 
 			runeCount := read_bytes(&reader, u32)
 			for n in 0..<runeCount{
 				r := read_bytes(&reader, rune)
-				rect := sdl2.Rect{
-					i32(read_bytes(&reader, u16)),
-					i32(read_bytes(&reader, u16)),
-					i32(read_bytes(&reader, u16)),
-					i32(read_bytes(&reader, u16))
+				rect := Rect{
+					{f32(read_bytes(&reader, u16)), f32(read_bytes(&reader, u16))},
+					{f32(read_bytes(&reader, u16)), f32(read_bytes(&reader, u16))}
 				}
 				newFont.runeMap[r] = rect
 			}
@@ -699,20 +682,16 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 	_font_page_load_task :: proc(data:rawptr){
 		task := cast(^FontPageLoadTask)data
 
-		context.allocator = task.page.loadTempAllocator
-		context.temp_allocator = allocator_make()
-		defer allocator_delete(context.temp_allocator)
+		context.allocator = allocator_make()
+		context.temp_allocator = context.allocator
+		defer allocator_delete(context.allocator)
 
-		//decoded pixels only need to live until the texture upload below, so they can go on the temp allocator
 		img, imgErr := qoi.load_from_bytes(task.fileData)
 		assertf(imgErr == nil, "ERROR: Failed to decode font page! %v", imgErr)
 
-		task.page.surface = sdl2.CreateRGBSurfaceWithFormatFrom(
-			raw_data(img.pixels.buf), i32(img.width), i32(img.height), 32, i32(img.width*4),
-			u32(sdl2.PixelFormatEnum.ABGR8888)
-		)
+		texture_upload(task.page.texture, img.pixels.buf[:], FONT_PAGE_SIZE, generateMipsAfter=task.page.hd)
 
-		atomic_set(&task.page.loadState, .loadingTexture)
+		atomic_set(&task.page.loadState, .loaded)
 	}
 
 	_font_page_preload :: proc(pageFileData:[]u8, pageName:string){
@@ -720,7 +699,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		task.fileData = pageFileData
 		task.page = &fonts._pages[pageName]
 
-		atomic_set(&task.page.loadState, .loadingSurface)
+		atomic_set(&task.page.loadState, .loading)
 
 		thread_task_run_with_data(task, _font_page_load_task)
 	}
@@ -731,17 +710,8 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			for pageName,&page in fonts._pages{
 				switch atomic_get(&page.loadState){
 					case .unloaded: panicf("Blocked on font page '%s' that wasn't preloaded!", pageName)
-					case .loadingSurface: done = false
+					case .loading: done = false
 					case .loaded: //do nothing
-					case .loadingTexture: 
-						rect := sdl2.Rect{0, 0, FONT_PAGE_SIZE, FONT_PAGE_SIZE}
-						sdl2.UpdateTexture(page.texture, &rect, page.surface.pixels, page.surface.pitch)
-						
-						if page.isHD do _texture_mipmaps_generate(page.texture)
-						sdl2.FreeSurface(page.surface)
-						page.surface = nil
-						allocator_delete(page.loadTempAllocator)
-						atomic_set(&page.loadState, .loaded)
 				}
 			}
 			if done do break
@@ -768,7 +738,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 		}
 
 		oldPage := fonts._pages[pageName]
-		sdl2.DestroyTexture(oldPage.texture)
+		tex_destroy({ptr=oldPage.texture})
 
 		_font_page_index_load(indexFileData, pageName)
 		_font_page_preload(pageFileData, pageName)
@@ -776,25 +746,113 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 	}
 
 // SHADERS
-	_shader_load :: proc(glslFileData:[]u8, assetName:string){
-		sourceStrings := strings.split(string(glslFileData), "<fragment>", context.temp_allocator)
-		vertSource := strings.clone_to_cstring(strings.concatenate({"#version 130\n", sourceStrings[0]}, context.temp_allocator), context.temp_allocator)
-		fragSource := strings.clone_to_cstring(strings.concatenate({"#version 130\n", sourceStrings[1]}, context.temp_allocator), context.temp_allocator)
-		strmap_set(&shaders._shaders_map, assetName, shader_compile(vertSource, fragSource))
+	//Compiles a shader from packed HLSL source. Runs at init, as each shader comes out of the asset pack.
+	_shader_load :: proc(hlslFileData:[]u8, assetName:string){
+		stage:shadercross.ShaderStage
+		if string_has_suffix(assetName, ".frag") do stage = .FRAGMENT
+		else if string_has_suffix(assetName, ".vert") do stage = .VERTEX
+		else if string_has_suffix(assetName, ".comp") do stage = .COMPUTE
+		else do panicf("Shader '%s' has no stage suffix!", assetName)
+
+		spirvSize:uint
+		spirv := shadercross.CompileSPIRVFromHLSL({
+			source=string_to_cstring(string(hlslFileData), context.temp_allocator),
+			entrypoint="main",
+			shader_stage=stage,
+		}, &spirvSize)
+		assertf(spirv != nil, "Shader compile failed (%s): %s", assetName, sdl3.GetError())
+		defer sdl3.free(spirv)
+
+		name := assetName[:len(assetName)-5] //drop the ".vert"/".frag"/".comp" suffixes
+
+		if stage == .COMPUTE{
+			computeMeta := shadercross.ReflectComputeSPIRV(cast([^]u8)spirv, spirvSize, 0)
+			assertf(computeMeta != nil, "Shader reflection failed (%s): %s", assetName, sdl3.GetError())
+			defer sdl3.free(computeMeta)
+
+			pipeline := shadercross.CompileComputePipelineFromSPIRV(render.device, {
+				bytecode=cast([^]u8)spirv,
+				bytecode_size=spirvSize,
+				entrypoint="main",
+				shader_stage=stage,
+			}, computeMeta^, 0)
+			assertf(pipeline != nil, "GPU compute pipeline '%s' failed to compile! %s", assetName, sdl3.GetError())
+
+			strmap_set(&render._compute_shader_pipelines_map, name, pipeline)
+			return
+		}
+
+		//reflection fills in the resource counts CreateGPUShader would otherwise need by hand
+		meta := shadercross.ReflectGraphicsSPIRV(cast([^]u8)spirv, spirvSize, 0)
+		assertf(meta != nil, "Shader reflection failed (%s): %s", assetName, sdl3.GetError())
+		defer sdl3.free(meta)
+
+		compiled := shadercross.CompileGraphicsShaderFromSPIRV(render.device, {
+			bytecode=cast([^]u8)spirv,
+			bytecode_size=spirvSize,
+			entrypoint="main",
+			shader_stage=stage,
+		}, meta.resource_info, 0)
+		assertf(compiled != nil, "GPU shader '%s' failed to compile! %s", assetName, sdl3.GetError())
+
+		if stage == .VERTEX{
+			strmap_set(&render._vert_shaders_map, name, compiled)
+			if name == "quad" do render._quad_vert_shader = compiled
+			else if name == "mesh" do render._mesh_vert_shader = compiled
+			return
+		}
+
+		shaderInd,_ := union_variant_index_by_name(ShaderParams, format("Sh_%s", string_capitalize(name, context.temp_allocator)))
+		sh := &render._shaders_array[shaderInd]
+		sh.name = clone(name, assets.allocator)
+		sh.ptr = compiled
+		sh.samplerCount = meta.resource_info.num_samplers
+		sh.storageBufferCount = meta.resource_info.num_storage_buffers
+		reflect.set_union_variant_raw_tag(sh._renderParams, shaderInd)
 	}
 
-	//data is path to the intermediate shader .glsl file
+	//data is the path to the intermediate .hlsl file
 	_shader_hot_reload :: proc(data:[]u8){
-		glslFilePath := string(data)
-		assetName := filepath.stem(glslFilePath)
+		hlslFilePath := string(data)
+		assetName := filepath.stem(hlslFilePath)
+		shaderName := assetName[:len(assetName)-5]
 		printf("Hot-reloading shader '%s'...", assetName)
-		
-		glslFileData,_ := os.read_entire_file(glslFilePath, context.temp_allocator)
-		
-		mapPtr := &shaders._shaders_map[assetName]
-		shader_destroy(mapPtr^)
-		_shader_load(glslFileData, assetName)
-		struct_set(sh, assetName, mapPtr^)
+
+		hlslFileData,_ := os.read_entire_file(hlslFilePath, context.temp_allocator)
+
+		_ = sdl3.WaitForGPUIdle(render.device)
+
+		if string_has_suffix(assetName, ".comp"){
+			oldPipeline := render._compute_shader_pipelines_map[shaderName]
+			_shader_load(hlslFileData, assetName)
+			if oldPipeline != nil{
+				for &dispatch in render._compute_dispatches{
+					if dispatch.pipeline == oldPipeline do dispatch.pipeline = render._compute_shader_pipelines_map[shaderName]
+				}
+				sdl3.ReleaseGPUComputePipeline(render.device, oldPipeline)
+			}
+			return
+		}
+
+		old:^sdl3.GPUShader
+		isVert := string_has_suffix(assetName, ".vert")
+		if isVert do old = render._vert_shaders_map[shaderName]
+		else{
+			ind, found := union_variant_index_by_name(ShaderParams, format("Sh_%s", string_capitalize(shaderName, context.temp_allocator)))
+			if found do old = render._shaders_array[ind]
+		}
+
+		staleKeys := make([dynamic]RenderPipelineKey, context.temp_allocator)
+		for key in render._pipelines_map{
+			if key.vertShader == old || key.fragShader == old do append(&staleKeys, key)
+		}
+		for key in staleKeys{
+			sdl3.ReleaseGPUGraphicsPipeline(render.device, render._pipelines_map[key])
+			delete_key(&render._pipelines_map, key)
+		}
+		if old != nil do sdl3.ReleaseGPUShader(render.device, old)
+
+		_shader_load(hlslFileData, assetName)
 	}
 
 // STAGES
@@ -843,7 +901,7 @@ _asset_add_to_file_tree :: proc(asset:FileTreeNode, parentPath:string, topFolder
 			locID := 0
 			if locCode != "en"{
 				if len(dialogue.locales_loaded) >= LOCALES_MAX{
-					sdl2.ShowSimpleMessageBox({.ERROR}, "Diorama Break", string_to_cstring(format("Error: Cannot load more than %i dialogue localization files! Delete some!!", LOCALES_MAX), context.temp_allocator), nil)
+					sdl3.ShowSimpleMessageBox({.ERROR}, "Diorama Break", string_to_cstring(format("Error: Cannot load more than %i dialogue localization files! Delete some!!", LOCALES_MAX), context.temp_allocator), nil)
 					panic("Too many dialogue localization files!")
 				}
 				locID = len(dialogue.locales_loaded)
@@ -943,7 +1001,7 @@ _packed_assets_load :: proc(){
 		index:int
 	}
 	FontSubPageData :: struct{
-		page:^sdl2.Texture,
+		page:^sdl3.Texture,
 		x:i32,
 		y:i32
 	}
@@ -969,9 +1027,9 @@ _packed_assets_load :: proc(){
 		assetDataPtr:rawptr
 		{
 			trace("Load asset file")
-			assetDataPtr = sdl2.LoadFile(rawptr(packFileCstr), &assetFileSize)
+			assetDataPtr = sdl3.LoadFile(rawptr(packFileCstr), &assetFileSize)
 		}
-		defer sdl2.free(assetDataPtr) //TODO: this needs to be freed at the end of game_init, not at the end of this proc
+		defer sdl3.free(assetDataPtr) //TODO: this needs to be freed at the end of game_init, not at the end of this proc
 		assetData := slice.bytes_from_ptr(assetDataPtr, int(assetFileSize))
 	}
 	else{
@@ -1063,9 +1121,6 @@ _assets_load_end :: proc(){
 	_reload_entity_prefabs()
 	_nineslice_info_reload()
 	
-	//shaders
-	_reload_shader_ids()
-
 	//fonts
 	for fontName in fonts._fonts_map{
 		font := &fonts._fonts_map[fontName]

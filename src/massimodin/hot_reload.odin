@@ -19,8 +19,7 @@ GlobalState :: struct{
 	assets:^AssetSystem,
 	particles:^ParticlesSystem,
 	seq:^SequenceSystem,
-	shaders:^ShaderSystem,
-	sh:^ShaderIDs,
+	render:^RenderSystem,
 	sprites:^SpriteSystem,
 	sp:^SpriteIDs,
 	fonts:^FontSystem,
@@ -68,8 +67,7 @@ _pre_hot_reload :: proc() -> rawptr{
 	gs.assets = assets
 	gs.particles = particles
 	gs.seq = seq
-	gs.shaders = shaders 
-	gs.sh = sh 
+	gs.render = render
 	gs.sprites = sprites 
 	gs.sp = sp 
 	gs.fonts = fonts 
@@ -118,8 +116,7 @@ _post_hot_reload :: proc(globalStatePtr:rawptr){
 	assets = gs.assets
 	particles = gs.particles
 	seq = gs.seq
-	shaders = gs.shaders 
-	sh = gs.sh 
+	render = gs.render 
 	sprites = gs.sprites 
 	sp = gs.sp 
 	fonts = gs.fonts 
@@ -145,7 +142,6 @@ _post_hot_reload :: proc(globalStatePtr:rawptr){
 
 	//libraries that need to be reinitialized
 	_imgui_init()
-	_gl_init()
 
 	//must be reinitialized to refresh stored type ids and proc pointers
 	_components_metadata_init() 

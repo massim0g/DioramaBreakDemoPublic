@@ -30,6 +30,7 @@ CombatUnit :: struct{
 	sprites:CombatUnitSpriteSet,
 	ghostPositions:[]Vec2i,
 	ghostDrawData:[]CombatUnitGhostDrawData,
+	ghostDepths:[]f32, //parallel to ghostDrawData, ghosts get their own render depths
 	ghostBaseDrawData:CombatUnitGhostDrawData,
 	targetPreference:CombatUnitAITargetPreference,
 	reactionTime:int,
@@ -695,18 +696,18 @@ combatUnit_stun_tail :: proc(using self:^CombatUnit, committedActionOnly:=false)
 //by default, will check if the action triggers on or after the given trigger step
 combatUnit_queued_action_find :: proc(using self:^CombatUnit, kind:=CombatActionKind.attack, reverse:=false, triggerStepFilter:=-1, checkExactTriggerStep:=false) -> ^CombatActionQueued{
 	stepCheck :: proc(actionStep, checkStep:int, checkExact:bool) -> bool{
-		if checkStep <= 0 do return true
+		if checkStep < 0 do return true
 		if checkExact do return actionStep == checkStep
 		return actionStep >= checkStep
 	}
 	if reverse{
 		#reverse for &caq in queuedActions{
-			if caq.kind == kind && stepCheck(triggerStepFilter, combatActionQueued_trigger_step(&caq), checkExactTriggerStep) do return &caq
+			if caq.kind == kind && stepCheck(combatActionQueued_trigger_step(&caq), triggerStepFilter, checkExactTriggerStep) do return &caq
 		}
 	}
 	else{
 		for &caq in queuedActions{
-			if caq.kind == kind && stepCheck(triggerStepFilter, combatActionQueued_trigger_step(&caq), checkExactTriggerStep) do return &caq
+			if caq.kind == kind && stepCheck(combatActionQueued_trigger_step(&caq), triggerStepFilter, checkExactTriggerStep) do return &caq
 		}
 	}
 	return nil
@@ -1018,7 +1019,7 @@ case .preDraw:
 		append(&ghostPosArr, combatEntity.pos)
 		ghostDrawDataArr := make([dynamic]CombatUnitGhostDrawData, 0, len(queuedActions), context.temp_allocator)
 		depthArr := make([dynamic]f32, 0, len(queuedActions), context.temp_allocator)
-		append(&depthArr, stageEntity.depth.(f32))
+		append(&depthArr, stageEntity.depth)
 		lastPos := combatEntity.pos
 		curPos := lastPos
 		curStep := combat.current_step + stunCounter
@@ -1088,7 +1089,7 @@ case .preDraw:
 		}
 
 		ghostDrawData = ghostDrawDataArr[:]
-		depth = depthArr[:]
+		ghostDepths = depthArr[1:] //index 0 is the base unit's depth
 		ghostPositions = ghostPosArr[:]
 	}
 
@@ -1143,8 +1144,8 @@ case .draw:
 		}
 	}
 	
-	switch entities.draw_step{
-		case 0:
+	//base unit at the entity's own depth
+	{
 			inPlanning := combat.phase == .planning && combat.time_stop_mode != .disabled
 
 			spr := spriter.mySprite
@@ -1154,15 +1155,13 @@ case .draw:
 				scale.x = ghostBaseDrawData.dir == .left ? -1:1
 			}
 			
-			entAlpha := alpha
-			alpha = 1
-			defer alpha = entAlpha
 			drawTex := tex_make(spr.size) //needed in order to preserve other shaders
 			defer tex_destroy(drawTex)
 			origin := Vec2{f32(spr.origin.x), f32(spr.origin.y)}
 			if scale.x < 0 do origin.x += spr.size.x - origin.x*2 - 1
 			drawTexPos := stageEntity_draw_pos(stageEntity) - origin
 			tex_target_set(drawTex, drawTexPos)
+
 			if player != nil{
 				pro_blade_pal_swap_set()
 			}
@@ -1174,45 +1173,53 @@ case .draw:
 				)
 			}
 			else{
-				if player != nil{
-					sprite_draw_ex(
-						spr, stageEntity_draw_pos(stageEntity), spriter.lastFrame, 
-						scale, transform.angle, color, 1, blendmode
-					)
+				//stage entity normal .draw is bulk-handled in stage_render, so replicate it here to composite into drawTex
+				blendmode_set(blendmode)
+				drawPos := stageEntity_draw_pos(stageEntity)
+				feetPos := stageEntity_feet_pos(stageEntity)
+				if player != nil || (unitType != .enemy && cofind(PlayerFollower) != nil){ //reduce jitter when moving around by adding mover fractional speed
+					drawPos = round(drawPos + stageCharacter.mover.fractionalSpeed.xy)
+					if fp,ok:=&feetPos.(Vec2);ok do fp^ = round(fp^ + stageCharacter.mover.fractionalSpeed.xy) 
 				}
-				else do component_event_process(stageEntity, .draw)
+				sprite_draw_ex(
+					spr, drawPos, spriter.lastFrame,
+					scale, transform.angle, color, 1, feetPos
+				)
+				blendmode_set(.blend)
 			}
 
+			feet:Maybe(Vec2)
 			if player != nil{
 				shader_reset()
-				stage_shader_uniforms_set(stageEntity)
+				feet = stageEntity_feet_pos(stageEntity)
 			}
 			tex_target_reset()
 			drawAlpha :f32= 1
 			if combat.phase == .planning && combatEntity.placedInGrid{
-				alphaTarget :f32= (!cutscene.enabled && 
+				alphaTarget :f32= (!cutscene.enabled &&
 				rect_contains(stageEntity_draw_rect(stageEntity, spriter.lastFrame), combat_cursor_stage_pos()) &&
 				!(input_device() == .gamepad && combat.selected_action == nil && combat.selected_unit == self)
 				)?0.5:1
 				drawAlpha = ui_cue_map_stateful(imkey_combine(&baseBase, "hoverFade"), 6, alphaTarget, cueMap=&combat.cues)
 			}
-			tex_draw_ex(drawTex, drawTexPos, alpha=drawAlpha*entAlpha)
-			stage_shader_uniforms_reset(stageEntity)
-			
-		case:
-			combat_shader_set(false)
-			if player != nil do pal_swap_set(sp.proBladePalettes, player_character_equipped_item(.pro, .blade).paletteIndex)
-			drawData := ghostDrawData[entities.draw_step-1]
-			spr := combatUnitGhostDrawData_sprite(self, drawData)
-			sprite_draw_ex(
-				spr, drawData.pos, sprite_frame_get(spr), 
-				Vec2{drawData.dir==.left ? -1:1, transform.scale.y}, transform.angle, (entities.draw_step == len(self.depth.([]f32))-1) ? ghostCol : baseCol, 0.5
-			)
-			if player != nil do shader_reset()
+			tex_draw_ex(drawTex, drawTexPos, alpha=drawAlpha*alpha, feetPos=feet)
 	}
 
-	
-	if(combat.phase == .planning && entities.draw_step == len(ghostDrawData) && combatUnit_active(self) && unitState == .alive){
+	//ghosts, each at its own depth
+	for drawData, ghostInd in ghostDrawData{
+		render_depth(ghostDepths[ghostInd])
+		combat_shader_set(false)
+		if player != nil do pal_swap_set(sp.proBladePalettes, player_character_equipped_item(.pro, .blade).paletteIndex)
+		spr := combatUnitGhostDrawData_sprite(self, drawData)
+		sprite_draw_ex(
+			spr, drawData.pos, sprite_frame_get(spr),
+			Vec2{drawData.dir==.left ? -1:1, transform.scale.y}, transform.angle, (ghostInd == len(ghostDrawData)-1) ? ghostCol : baseCol, 0.5
+		)
+		if player != nil do shader_reset()
+	}
+
+	//HP bar, drawn with the frontmost layer
+	if(combat.phase == .planning && combatUnit_active(self) && unitState == .alive){
 		combat_shader_set(false)
 
 		//HP bar

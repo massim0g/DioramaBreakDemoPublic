@@ -1,6 +1,7 @@
 # One-time third-party dependency setup for Massimodin.
 # Downloads the Odin compiler and FMOD Studio to project-local directories so they don't interfere with any system-wide installs.
 # Also keeps the FMOD runtime dlls in sync with the installed FMOD Studio version.
+# Optionally also fetches the Steam Runtime sysroot used for linux cross-builds (about a 1.2 GB download; only needed when building the linux target).
 
 $ErrorActionPreference = "Stop"
 
@@ -10,6 +11,7 @@ $ErrorActionPreference = "Stop"
 # Versions
 $ODIN_VERSION = "dev-2026-06"
 $FMOD_VERSION = "2.02.35"
+$STEAMRT4_SDK_TAG = "4.0.20260805.254769"
 
 # Paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -204,8 +206,8 @@ function Update-FmodDlls {
         catch { $false }
     }
 
-    $releaseDllDir = Join-Path $ProjectDir "lib\_releaseOnly"
-    $debugDllDir = Join-Path $ProjectDir "lib\_debugOnly"
+    $releaseDllDir = Join-Path $ProjectDir "lib\_win64\_releaseOnly"
+    $debugDllDir = Join-Path $ProjectDir "lib\_win64\_debugOnly"
 
     $upToDate = (Test-Path (Join-Path $releaseDllDir "fmod.dll")) -and
         (Test-Path (Join-Path $releaseDllDir "fmodstudio.dll")) -and
@@ -264,6 +266,71 @@ function Update-FmodDlls {
 }
 
 
+# Steam Runtime sysroot for linux cross-builds
+# The linux binaries are linked against the Steam Runtime 4 ("steamrt4") libraries so they run on everything Steam runs on.
+# The sysroot arrives as a prebaked sysroot.zip: downloaded from the public repo's linux-build-deps release,
+# or produced from the steamrt SDK image by build_tools/release/generate_linux_build_deps.ps1 on machines that have it.
+
+# Reads the steamrt tag baked into a sysroot.zip without extracting it.
+function Get-SysrootZipVersion {
+    param([string]$ZipPath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        $entry = $zip.GetEntry("installed_version.txt")
+        if (-not $entry) { return "" }
+        $reader = New-Object IO.StreamReader($entry.Open())
+        try { return $reader.ReadToEnd().Trim() } finally { $reader.Dispose() }
+    } finally { $zip.Dispose() }
+}
+
+function Install-Steamrt4Sysroot {
+    $dest = Join-Path $DepsDir "steamrt4_sysroot"
+    # The steamrt tag is tracked with a marker file (baked into the zip), same idea as FMOD Studio
+    $versionMarker = Join-Path $dest "installed_version.txt"
+    if ((Test-Path $versionMarker) -and (Get-Content $versionMarker -Raw).Trim() -eq $STEAMRT4_SDK_TAG) {
+        Write-Host "Steam Runtime 4 sysroot ($STEAMRT4_SDK_TAG) is already installed in '$dest'."
+        return
+    }
+    if (Test-Path $dest) {
+        Write-Host "Incorrect Steam Runtime sysroot version in .deps, replacing with $STEAMRT4_SDK_TAG..."
+        Remove-Item $dest -Recurse -Force -Confirm:$false
+    }
+
+    # Find a steamrt4_sysroot.zip of the right version: a local copy, then generating one, then downloading one
+    $buildToolsDir = Join-Path $ScriptDir "build_tools"
+    $zipPath = Join-Path $buildToolsDir "steamrt4_sysroot.zip"
+    if ((Test-Path $zipPath) -and (Get-SysrootZipVersion $zipPath) -ne $STEAMRT4_SDK_TAG) {
+        Write-Host "The local steamrt4_sysroot.zip has the wrong version, discarding it."
+        Remove-Item $zipPath -Force -Confirm:$false
+    }
+    if (-not (Test-Path $zipPath)) {
+        $generateScript = Join-Path $buildToolsDir "release\generate_linux_build_deps.ps1"
+        if (Test-Path $generateScript) {
+            & $generateScript
+        } else {
+            $url = "https://github.com/massim0g/DioramaBreakDemoPublic/releases/latest/download/steamrt4_sysroot_$STEAMRT4_SDK_TAG.zip"
+            Write-Host "Downloading the prebaked sysroot from $url (about 700 MB)..."
+            (New-Object System.Net.WebClient).DownloadFile($url, $zipPath)
+        }
+        if ((Get-SysrootZipVersion $zipPath) -ne $STEAMRT4_SDK_TAG) {
+            throw "steamrt4_sysroot.zip does not carry the expected steamrt tag $STEAMRT4_SDK_TAG"
+        }
+    }
+
+    # Extract into a scratch directory and only move into place once complete, so an interrupted
+    # run never leaves a half-populated sysroot behind.
+    Write-Host "Extracting the sysroot (about 2.7 GB)..."
+    $scratch = "$dest.incomplete"
+    if (Test-Path $scratch) { Remove-Item $scratch -Recurse -Force -Confirm:$false }
+    Expand-Archive -Path $zipPath -DestinationPath $scratch
+    Move-Item $scratch $dest
+
+    Write-Host "Steam Runtime 4 sysroot installed to '$dest'."
+}
+
+
 # Run
 
 Write-Host "INSTALLING MASSIMODIN GAME ENGINE DEPENDENCIES..."
@@ -292,3 +359,10 @@ if ($script:installIncomplete) {
 }
 Write-Host "INSTALL COMPLETE!"
 Write-Host "Launch the builder daemon using src\_tools\build_tools\relaunch_builder.ps1"
+Write-Host ""
+
+if((Read-Host "Would you also like to install linux build dependencies (y/n)?") -eq "y"){
+    Install-Steamrt4Sysroot
+    Write-Host ""
+    Write-Host "LINUX BUILD DEPENDENCIES INSTALLED!"
+}

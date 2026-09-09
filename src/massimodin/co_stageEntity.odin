@@ -1,7 +1,7 @@
 #+feature using-stmt
 package massimodin //@nested-tags:_components/
 
-import "../sdl2"
+import "../sdl3"
 
 //Holds all information and requires all components that are necessary to rendering and using an entity in a stage
 StageEntity :: struct{
@@ -18,8 +18,8 @@ StageEntity :: struct{
 	drawParallax:Vec2, //@e
 	defaultAnimSpeed:f32, //@e
 	editableDepthOffset:f32, //@e
-	internalDepthOffset:union{f32, [2]i32},
-	preciseDepthTexturePage:^sdl2.Texture, //cached to save time
+	internalDepthOffset:union{f32, Vec2},
+	preciseDepthTexturePage:^TexturePage, //cached to save time
 	preciseDepthSegments:[]StageEntityPreciseDepthSegment,
 	resizable:bool, //@e
 	displayID:bool, //@e
@@ -53,8 +53,8 @@ StageEntityDepthKind :: enum{
 
 StageEntityPreciseDepthSegment :: struct{
 	internalDepthOffset:f32,
-	srcRect:sdl2.Rect,
-	dstRect:sdl2.Rect //add dstOffset
+	srcRect:Rect,
+	dstRect:Rect //add dstOffset
 }
 
 StageEntityShadowKind :: enum{
@@ -84,6 +84,12 @@ stageEntity_draw_pos :: #force_inline proc(se:^StageEntity) -> Vec2{
 		}
 	}
 	return out
+}
+
+//Returns the feetPos draw param for an entity's vertically shaded draws.
+//Returns nil if the entity should not receive vertical shading.
+stageEntity_feet_pos :: #force_inline proc "contextless" (self:^StageEntity) -> Maybe(Vec2){
+	return (self.depthKind != .floor && self.receivesVerticalShadow && !stage_edit.enabled) ? self.transform.pos : nil
 }
 
 //Will use the current frame by default, but you can pass a frame index if you want a consistent rect
@@ -120,6 +126,7 @@ stageEntity_unstatic :: proc(se:^StageEntity){
 	se.static = false
 	se.staticSet = false
 	se.spriter.disabled = false
+	se.visible = true
 }
 
 //Gets the stage entity closest to a position (does not account for z position).
@@ -324,47 +331,55 @@ case .loaded:
 	#partial switch depthKind{
 		case .baseTop:
 			frame := spriter.mySprite.frames[0]
-			highestBaseY := frame.texturePagePos.y+frame.texturePagePos.h
-			for x:=frame.texturePagePos.x;x<frame.texturePagePos.x+frame.texturePagePos.w;x+=1{
-				for y:=frame.texturePagePos.y+frame.texturePagePos.h-1;y>=0;y-=1{
-					if surface_pixel_filled(frame.texturePageSurface, int(x), int(y)){
+			tppX := int(frame.texturePagePos.x)
+			tppY := int(frame.texturePagePos.y)
+			tppW := int(frame.texturePagePos.size.x)
+			tppH := int(frame.texturePagePos.size.y)
+			highestBaseY := tppY+tppH
+			for x:=tppX;x<tppX+tppW;x+=1{
+				for y:=tppY+tppH-1;y>=0;y-=1{
+					if surface_pixel_filled(frame.texturePage.surface, x, y){
 						if y < highestBaseY do highestBaseY = y
 						break
 					}
 				}
 			}
 
-			internalDepthOffset = f32(spriter.mySprite.origin.y - (highestBaseY - frame.texturePagePos.y + frame.trimOffset.y))
+			internalDepthOffset = spriter.mySprite.origin.y - (f32(highestBaseY) - frame.texturePagePos.y + frame.trimOffset.y)
 
 		case .precise:
 			frame := spriter.mySprite.frames[0]
 			preciseDepthTexturePage = spriter.mySprite.frames[0].texturePage
-			segmentStartX := frame.texturePagePos.x
+			tppX := int(frame.texturePagePos.x)
+			tppY := int(frame.texturePagePos.y)
+			tppW := int(frame.texturePagePos.size.x)
+			tppH := int(frame.texturePagePos.size.y)
+			segmentStartX := tppX
 			segmentEndX := segmentStartX
-			lastY :i32= -1
-			segments := make([dynamic]StageEntityPreciseDepthSegment, 0, frame.texturePagePos.w)
-			origin := [2]i32{spriter.mySprite.origin.x - frame.trimOffset.x, spriter.mySprite.origin.y - frame.trimOffset.y}
-			for x:=frame.texturePagePos.x;x<frame.texturePagePos.x+frame.texturePagePos.w;x+=1{
-				for y:=frame.texturePagePos.y+frame.texturePagePos.h-1;y>=0;y-=1{
-					if surface_pixel_filled(frame.texturePageSurface, int(x), int(y)){
+			lastY := -1
+			segments := make([dynamic]StageEntityPreciseDepthSegment, 0, tppW)
+			origin := spriter.mySprite.origin - frame.trimOffset
+			segmentMake :: proc(segmentStartX, segmentEndX, lastY:int, frame:^SpriteFrame, origin:Vec2, flipX:bool) -> StageEntityPreciseDepthSegment{
+				srcRect := Rect{
+					{f32(segmentStartX), frame.texturePagePos.y},
+					{f32(segmentEndX - segmentStartX + 1), frame.texturePagePos.size.y}
+				}
+				dstX := f32(segmentStartX) - frame.texturePagePos.x - origin.x
+				if flipX{
+					dstX*=-1
+					dstX -= srcRect.size.x-1
+				}
+				return {
+					origin.y - (f32(lastY) - frame.texturePagePos.y),
+					srcRect,
+					Rect{{dstX, -origin.y}, srcRect.size}
+				}
+			}
+			for x:=tppX;x<tppX+tppW;x+=1{
+				for y:=tppY+tppH-1;y>=0;y-=1{
+					if surface_pixel_filled(frame.texturePage.surface, x, y){
 						if y != lastY && lastY != -1{
-							srcRect := sdl2.Rect{
-								segmentStartX, frame.texturePagePos.y,
-								segmentEndX - segmentStartX + 1, frame.texturePagePos.h 
-							}
-							dstX := segmentStartX - frame.texturePagePos.x - origin.x
-							if transform.scale.x < 0{
-								dstX*=-1
-								dstX -= srcRect.w-1
-							}
-							append(&segments, StageEntityPreciseDepthSegment{
-								f32(origin.y - (lastY - frame.texturePagePos.y)),
-								srcRect,
-								sdl2.Rect{
-									dstX, -origin.y,
-									srcRect.w, srcRect.h
-								}
-							})
+							append(&segments, segmentMake(segmentStartX, segmentEndX, lastY, &frame, origin, transform.scale.x < 0))
 							segmentStartX = x
 						}
 						lastY = y
@@ -375,23 +390,7 @@ case .loaded:
 			}
 
 			//last segment
-			srcRect := sdl2.Rect{
-				segmentStartX, frame.texturePagePos.y,
-				segmentEndX - segmentStartX + 1, frame.texturePagePos.h 
-			}
-			dstX := segmentStartX - frame.texturePagePos.x - origin.x
-			if transform.scale.x < 0{
-				dstX*=-1
-				dstX -= srcRect.w-1
-			}
-			append(&segments, StageEntityPreciseDepthSegment{
-				f32(origin.y - (lastY - frame.texturePagePos.y)),
-				srcRect,
-				sdl2.Rect{
-					dstX, -origin.y,
-					srcRect.w, srcRect.h
-				}
-			})
+			append(&segments, segmentMake(segmentStartX, segmentEndX, lastY, &frame, origin, transform.scale.x < 0))
 
 			// if transform.scale.x == -1{ //special case to allow flipping objects
 			// 	// sort(&segments, proc(a,b:StageEntityPreciseDepthSegment)->bool{
@@ -439,13 +438,8 @@ case .justMade:
 
 	if debugVisibleOnly do visible = componentsVisible && (stage_edit.enabled || stage.debugEntitiesVisible)
 	
-case .draw:
-	stage_shader_uniforms_set(self)
-	sprite_draw_ex(
-		spriter.mySprite, stageEntity_draw_pos(self), spriter.lastFrame, 
-		transform.scale, transform.angle, color, alpha, blendmode
-	)
-	stage_shader_uniforms_reset(self)
+//normal .draw handled in bulk in stage_render
+
 case .drawEditor:
 	if displayID do text_draw(uniqueID.s, stageEntity_draw_pos(self), font=fo.yal6w4__16, alignment=0)
 case .clean:
@@ -467,17 +461,56 @@ _stageEntities_bulk_update :: proc(){
 		switch depthKind{
 			case .origin: depth = -transform.y
 			case .baseTop: depth = -transform.y + internalDepthOffset.(f32)
-			case .floor: depth = DEPTH_MAX + transform.z 
-			case .precise: 
-				depth = nil //draws are handled by stage_render for efficiency's sake
-				internalDepthOffset = cast([2]i32)stageEntity_draw_pos(&self)
+			case .floor: depth = layer_depth(.stageBG) + transform.z 
+			case .precise:
+				//precise entities draw per segment in stage_render, their .draw is skipped there
+				internalDepthOffset = stageEntity_draw_pos(&self)
 		}
-		if depthKind != .precise do depth = depth.(f32) + editableDepthOffset
+		if depthKind != .precise do depth += editableDepthOffset
 
 		if static && !stage_edit.enabled{
 			cullRect = stageEntity_draw_rect(&self)
 			if len(spriter.mySprite.frames) <= 1 do spriter.disabled = true
 			staticSet = true
+		}
+	}
+}
+
+//stage entity draws
+//precise-depth stage entities draw per segment, layered independently
+_stageEntities_bulk_draw :: proc(){
+	when DEBUG do debug.onScreenStageEntities = 0
+
+	arr := coall(StageEntity)
+	for &self in arr{
+		using self
+		if !componentsVisible || !visible || .draw in disabledEvents do continue
+
+		when DEBUG do debug.onScreenStageEntities += 1
+
+		if depthKind == .precise{
+			baseDepth := -transform.y + editableDepthOffset
+			dstOffset := internalDepthOffset.(Vec2)
+			page := preciseDepthTexturePage
+			flags:QuadFlags = transform.scale.x < 0 ? {.flipX} : {}
+			for &segment in preciseDepthSegments{ //hot!
+				render_depth(baseDepth + segment.internalDepthOffset)
+				render_quad(page.texture, page.hd ? .linearMip : .nearest, Quad{
+					worldRect = {segment.dstRect.pos + dstOffset, segment.dstRect.size},
+					uvRect = texture_page_uv(page, segment.srcRect),
+					blend = BLEND_WHITE,
+					flags = flags,
+				})
+			}
+		}
+		else{
+			render_depth(depth)
+			blendmode_set(blendmode)
+			sprite_draw_ex(
+				spriter.mySprite, stageEntity_draw_pos(&self), spriter.lastFrame,
+				transform.scale, transform.angle, color, alpha, stageEntity_feet_pos(&self)
+			)
+			blendmode_set(.blend)
 		}
 	}
 }

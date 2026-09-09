@@ -36,6 +36,8 @@ _audio_system_init :: proc(){
 	init(&audio.background)
 	au = new(AudioIDs, assets.allocator)
 	
+	when DEBUG do fmcore.Debug_Initialize(fmcore.DEBUG_LEVEL_NONE, .DEBUG_MODE_TTY, nil, nil)
+
 	fm.System_Create(&audio._system, fmcore.VERSION)
 	fm.System_Initialize(audio._system, 100, fm.INIT_NORMAL, fmcore.INIT_NORMAL, nil)
 }

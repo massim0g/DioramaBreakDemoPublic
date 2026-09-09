@@ -1385,7 +1385,7 @@ sprites_pack_group_proc :: proc(task:thread.Task){
 	imagePath, _ := filepath.join({paths.build_win64, "texture_groups", fmt.aprintf("%s.texgroup", data.groupName)})
 	if os.exists(imagePath) do os.remove(imagePath)
 
-	if config.previewTexturePages{
+	if config_build.previewTexturePages{
 		pagesPath, _ := filepath.join({data.pagesDir, data.groupName})
 		for i := 0; true; i += 1{
 			pagePath := fmt.aprintf("%s__%d.qoi", pagesPath, i)
@@ -1468,7 +1468,7 @@ sprites_pack_group_proc :: proc(task:thread.Task){
 		qoiSize := u64(buffer_head(imageBuffer) - qoiSizePtr - 8)
 		(cast(^u64)qoiSizePtr)^ = qoiSize
 
-		if config.previewTexturePages{
+		if config_build.previewTexturePages{
 			_ = os.write_entire_file(
 				filepath.join({data.pagesDir, fmt.tprintf("%s__%d.qoi", data.groupName, pageInd)}, context.temp_allocator) or_else "", 
 				slice.bytes_from_ptr(rawptr(qoiSizePtr+8), int(qoiSize))

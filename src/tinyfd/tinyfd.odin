@@ -1,6 +1,11 @@
 package tinyfd
 
-foreign import "tinyfiledialogs64.lib"
+when ODIN_OS == .Windows{
+    foreign import tinyfd_lib "tinyfiledialogs64.lib"
+} 
+else when ODIN_OS == .Linux{
+    foreign import tinyfd_lib "system:tinyfiledialogs"
+}
 
 import _c "core:c"
 
@@ -12,7 +17,7 @@ TINYFILEDIALOGS_H :: 1;
 
 
 @(default_calling_convention="c")
-foreign tinyfiledialogs64 {
+foreign tinyfd_lib {
 
     @(link_name="tinyfd_winUtf8")
     tinyfd_winUtf8 : _c.int;

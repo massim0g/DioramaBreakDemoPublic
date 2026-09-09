@@ -5,7 +5,7 @@
 			<value>false</value>
 		</property>
 		<property name="builtBanksOutputDirectory">
-			<value>../build</value>
+			<value>../build/audio</value>
 		</property>
 		<relationship name="masterEventFolder">
 			<destination>{10626052-c98b-4665-b391-646f2512cecd}</destination>

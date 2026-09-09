@@ -3,6 +3,7 @@ package massimodin //@nested-tags:characters
 import "core:path/filepath"
 import "core:os"
 import "core:encoding/json"
+import "../sdl3"
 
 SaveDataSystem :: struct{
 	using save_data:Save,
@@ -51,7 +52,6 @@ Settings :: struct{
 
 	window_scale:int,
 	window_fullscreen:bool,
-	performance_mode:DisplayPerformanceMode,
 
 	dialogue_skip_enabled:bool,
 	dialogue_one_button_advance:bool,
@@ -102,6 +102,13 @@ _save_system_init :: proc(){
 			err := os.make_directory(save.dir)
 			assertf(err == nil, "Error creating save file directory: '%v'", err)
 		}
+	}
+	else when ON_LINUX{
+		//GetPrefPath also creates the directory ($XDG_DATA_HOME/DioramaBreak/, usually ~/.local/share/DioramaBreak/)
+		prefPath := sdl3.GetPrefPath("", SAVE_FILE_DIRECTORY_NAME)
+		assertf(prefPath != nil, "Could not get a save file directory!")
+		save.dir = string_clone(string(cstring(prefPath)), os_allocator)
+		sdl3.free(prefPath)
 	}
 }
 
@@ -284,7 +291,7 @@ game_load_to_checkpoint :: proc(doGameLoad:=true)->(loaded:bool){
 	stage_load(save.stage)
 	p := entity_make(Player)
 	transform_set(p.transform, save.playerPos)
-	camera_tracking_set(p.transform)
+	camera_tracking_set(p.stageCharacter._ptr)
 	proc_call_delayed(proc(){
 		cutscene.enabled = false
 		if save.loadDialogue != nil do dialogue_open(save.loadDialogue, save.loadDialogueLabel)
@@ -333,8 +340,6 @@ settings_load :: proc() -> (loaded:bool){
 	}
 
 	if !os.exists(path){
-		//first-time load, run hardware detection
-		display_performance_mode_detect()
 		settings_save() //write default settings
 		return
 	}

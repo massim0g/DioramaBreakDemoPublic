@@ -1,7 +1,7 @@
 #+feature using-stmt
 package massimodin //@nested-tags:engine/input
 
-import "../sdl2"
+import "../sdl3"
 import "core:simd"
 import "core:math/bits"
 
@@ -16,7 +16,7 @@ InputSystem :: struct{
 	mouse_scroll:int,
 	gamepad_states:[GAMEPADS_CAP]GamepadState,
 	gamepad_states_last_frame:[GAMEPADS_CAP]GamepadState,
-	gamepads_open:[GAMEPADS_CAP]^sdl2.GameController,
+	gamepads_open:[GAMEPADS_CAP]^sdl3.Gamepad,
 	last_device:int
 }
 input:^InputSystem
@@ -31,8 +31,8 @@ _input_system_init :: proc(){
 GAMEPAD_DEFAULT_DEADZONE :: 0.3
 GAMEPAD_DEFAULT_TRIGGER_DEADZONE :: 0.5
 GAMEPADS_CAP :: 4
-Key :: sdl2.Scancode
-Button :: sdl2.GameControllerButton
+Key :: sdl3.Scancode
+Button :: sdl3.GamepadButton
 
 MouseButton :: enum{
 	LEFT,
@@ -117,7 +117,7 @@ input_gamepad_directional_axes :: proc(directional:=GamepadDirectional.lStick, l
 
 //call once per frame after polling/pumping sdl events to update inputs
 _input_update_states :: proc(){ 
-	using sdl2
+	using sdl3
 
 	input.keyboard_state_last_frame = input.keyboard_state
 	input._mouse_state_last_frame = input._mouse_state
@@ -126,32 +126,34 @@ _input_update_states :: proc(){
 	newKeyState := GetKeyboardState(nil)
 
 	for sc in Scancode{
-		input.keyboard_state[sc] = newKeyState[sc] > 0
+		input.keyboard_state[sc] = newKeyState[sc]
 	}
 
 	input._mouse_window_position_last = input._mouse_window_position
-	newMouseState := GetMouseState(&input._mouse_window_position.x, &input._mouse_window_position.y)
+	mouseX, mouseY:f32
+	newMouseState := GetMouseState(&mouseX, &mouseY)
+	input._mouse_window_position = {i32(mouseX), i32(mouseY)}
 	
-	input._mouse_state[.LEFT] = newMouseState & BUTTON_LMASK > 0
-	input._mouse_state[.RIGHT] = newMouseState & BUTTON_RMASK > 0
-	input._mouse_state[.MIDDLE] = newMouseState & BUTTON_MMASK > 0
-	input._mouse_state[.BUTTON_4] = newMouseState & BUTTON_X1MASK > 0
-	input._mouse_state[.BUTTON_5] = newMouseState & BUTTON_X2MASK > 0
+	input._mouse_state[.LEFT] = newMouseState & BUTTON_LMASK != {}
+	input._mouse_state[.RIGHT] = newMouseState & BUTTON_RMASK != {}
+	input._mouse_state[.MIDDLE] = newMouseState & BUTTON_MMASK != {}
+	input._mouse_state[.BUTTON_4] = newMouseState & BUTTON_X1MASK != {}
+	input._mouse_state[.BUTTON_5] = newMouseState & BUTTON_X2MASK != {}
 
 	for i in 0..<GAMEPADS_CAP{
 		gamepad := input.gamepads_open[i]
 		if(gamepad == nil) do continue
-		for b in GameControllerButton{
-			input.gamepad_states[i].buttons[b] = GameControllerGetButton(gamepad, b) > 0
+		for b in GamepadButton{
+			input.gamepad_states[i].buttons[b] = GetGamepadButton(gamepad, b)
 		}
-		
+
 		MAX_AXIS :: f32(bits.I16_MAX)
-		input.gamepad_states[i].axes.left.x = f32(GameControllerGetAxis(gamepad, GameControllerAxis.LEFTX))/MAX_AXIS
-		input.gamepad_states[i].axes.left.y = f32(GameControllerGetAxis(gamepad, GameControllerAxis.LEFTY))/MAX_AXIS
-		input.gamepad_states[i].axes.right.x = f32(GameControllerGetAxis(gamepad, GameControllerAxis.RIGHTX))/MAX_AXIS
-		input.gamepad_states[i].axes.right.y = f32(GameControllerGetAxis(gamepad, GameControllerAxis.RIGHTY))/MAX_AXIS
-		input.gamepad_states[i].axes.lt = f32(GameControllerGetAxis(gamepad, GameControllerAxis.TRIGGERLEFT))/MAX_AXIS
-		input.gamepad_states[i].axes.rt = f32(GameControllerGetAxis(gamepad, GameControllerAxis.TRIGGERRIGHT))/MAX_AXIS
+		input.gamepad_states[i].axes.left.x = f32(GetGamepadAxis(gamepad, GamepadAxis.LEFTX))/MAX_AXIS
+		input.gamepad_states[i].axes.left.y = f32(GetGamepadAxis(gamepad, GamepadAxis.LEFTY))/MAX_AXIS
+		input.gamepad_states[i].axes.right.x = f32(GetGamepadAxis(gamepad, GamepadAxis.RIGHTX))/MAX_AXIS
+		input.gamepad_states[i].axes.right.y = f32(GetGamepadAxis(gamepad, GamepadAxis.RIGHTY))/MAX_AXIS
+		input.gamepad_states[i].axes.lt = f32(GetGamepadAxis(gamepad, GamepadAxis.LEFT_TRIGGER))/MAX_AXIS
+		input.gamepad_states[i].axes.rt = f32(GetGamepadAxis(gamepad, GamepadAxis.RIGHT_TRIGGER))/MAX_AXIS
 	}
 }
 

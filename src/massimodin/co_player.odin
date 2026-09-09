@@ -70,10 +70,10 @@ blade_swap_seq :: proc(newBlade:ItemRef) -> bool{
 
 				drawSize := Vec2{40, 40}
 				drawRect := Rect{0, drawSize}
-				t:=1
+				t:=0
 				if seq_cue(t) do audio_play(au.uiBoxOpen)
 				if seq_cue(t, BOX_POPUP_TIME_DEFAULT) do drawRect.size *= box_popup_scale(seq_time()-t)
-				t=dur-BOX_POPUP_TIME_DEFAULT+1
+				t=dur-BOX_POPUP_TIME_DEFAULT
 				if seq_cue(t, dur) do drawRect.size *= box_popup_scale(seq_time()-t, reverse=true)
 
 				if seq_cue(BOX_POPUP_TIME_DEFAULT + int(sprite_frame_time_get(sp.pro_blade_swap_anim, 3))) do audio_play(au.equipClick)
@@ -92,7 +92,7 @@ blade_swap_seq :: proc(newBlade:ItemRef) -> bool{
 					sp.pro_blade_swap_anim, f32(seq_time()-BOX_POPUP_TIME_DEFAULT), true
 				))
 				shader_reset()
-			}, palInd), useStageCameraPos=true)
+			}, palInd), layer_depth(.stageTop) + 1, true)
 		}
 	}
 	return seq_close()
@@ -144,6 +144,7 @@ case .loaded:
 	transform_set(transform, transform.pos) //update collider position
 
 case .update: //@p 64
+
 	if player_dummy(){
 		stageCharacter.overrideFacing = .none
 		mover_zero(mover)
@@ -244,7 +245,7 @@ case .update: //@p 64
 	}
 	else do facingBlockedFrames = 0
 
-	camera_tracking_set(transform)
+	camera_tracking_set(stageCharacter._ptr)
 
 	//interacting with the stage
 	if ginputs[.confirm] {

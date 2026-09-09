@@ -142,14 +142,5 @@ arena_snapshot_free :: proc(snapshot:^ArenaSnapshot){
 	clear(&snapshot.data)
 }
 
-//Reads bytes at a uintptr and advances it
-read_bytes :: #force_inline proc "contextless" (reader:^uintptr, $T:typeid) -> T{
-	val := (cast(^^T)reader)^^
-	reader^ += size_of(T)
-	return val
-}
 
-bytes_from_uip :: #force_inline proc "contextless" (ptr,len:uintptr) -> []u8{
-	return slice_from_ptr(cast(^u8)ptr, int(len))
-}
 

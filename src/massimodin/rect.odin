@@ -1,7 +1,5 @@
 package massimodin //@nested-tags:libraries/math
 
-import "../sdl2"
-
 Rect :: struct{
     using pos:Vec2,
     size:Vec2
@@ -9,13 +7,6 @@ Rect :: struct{
 Recti :: struct{
     using pos:Vec2i,
     size:Vec2i
-}
-
-sdl_rect_to_rect :: #force_inline proc "contextless"(r:sdl2.Rect)->Rect{
-	return Rect{{f32(r.x), f32(r.y)}, {f32(r.w), f32(r.h)}}
-}
-rect_to_sdl_rect :: #force_inline proc "contextless"(r:Rect)->sdl2.Rect{
-	return sdl2.Rect{i32(r.x), i32(r.y), i32(r.size.x), i32(r.size.y)}
 }
 
 rect_cast :: proc(r:Recti)->Rect{

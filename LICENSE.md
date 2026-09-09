@@ -51,7 +51,9 @@ Commercial licenses may be granted on a case-by-case basis, on terms decided per
 
 ## 6. Third-Party Components
 
-Third-Party Components (including, without limitation, FMOD by Firelight Technologies, SDL2, Dear ImGui, vendored bindings, certain fonts and graphical assets, and all of the Game's music and sound effects, which are © their composer and licensed to Studio Massimo Gauthier inc. for use with the Game) are not covered by this license and remain under their respective owners' terms. They may be used as part of compiling, running, and modding the Game as described in section 2, but may not be extracted, redistributed on their own, or reused in Derivative Projects. You are responsible for obtaining any rights you need to them.
+Third-Party Components (including, without limitation, FMOD by Firelight Technologies, SDL3, Dear ImGui, vendored bindings, certain fonts and graphical assets, and all of the Game's music and sound effects, which are © their composer and licensed to Studio Massimo Gauthier inc. for use with the Game) are not covered by this license and remain under their respective owners' terms. They may be used as part of compiling, running, and modding the Game as described in section 2, but may not be extracted, redistributed on their own, or reused in Derivative Projects. You are responsible for obtaining any rights you need to them.
+
+The `steamrt4_sysroot_*.zip` build-dependency archives attached to this repository's releases contain a subset of Valve's Steam Linux Runtime SDK (Debian-based free and open-source software, including components under the LGPL, the GPL with applicable exceptions, and the Apache License 2.0). Those files are likewise not covered by this license; they remain under their own free-software licenses, which govern their use and redistribution. A LICENSES.txt inside the archive identifies the source image, and corresponding sources are published by Valve (https://gitlab.steamos.cloud/steamrt/steamrt4, https://repo.steampowered.com/) and the Debian project (https://www.debian.org/).
 
 ## 7. Termination
 

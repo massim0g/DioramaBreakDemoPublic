@@ -4086,7 +4086,6 @@
           "seed": 2.0000000000000000
         },
         {
-          "debugVisibleOnly": true,
           "editableDepthOffset": -300.0000000000000000,
           "name": "stageEntity"
         },

@@ -241,9 +241,6 @@ stage_preset_stroma :: proc(){
 		}
 		else{
 			layerLimit:=99
-			area := rect_area(stage.bounds)
-			if area > 1_000_000 || settings.performance_mode == .potato do layerLimit = 1
-			else if area > 300_000 || settings.performance_mode == .reduced do layerLimit = 2
 			branchDensity :f32= (layerLimit<99)?3:4 //per screen
 			baseParallax :f32: 1
 			foliageLayers:[3]^Foliage
@@ -313,12 +310,12 @@ stage_preset_stroma :: proc(){
 		leafCount :: 0.000033 //per pixel of emitter
 		size := stage.bounds.size
 		sizeTotal := size.x+size.y
-		particleEmitter_make(fallingLeaf, leafCount*size.x, Rect{stage.bounds.pos + {0,-1}, {size.x, 1}}, -DEPTH_MAX+2)
-		particleEmitter_make(fallingLeaf, leafCount*size.y, Rect{stage.bounds.pos + {-1,0}, {1, size.y}}, -DEPTH_MAX+2)
-		particles_emit(fallingLeaf, roundi(0.000023*size.x*size.y), -DEPTH_MAX+2, stage.bounds)
+		particleEmitter_make(fallingLeaf, leafCount*size.x, Rect{stage.bounds.pos + {0,-1}, {size.x, 1}}, layer_depth(.stageFG)+2)
+		particleEmitter_make(fallingLeaf, leafCount*size.y, Rect{stage.bounds.pos + {-1,0}, {1, size.y}}, layer_depth(.stageFG)+2)
+		particles_emit(fallingLeaf, roundi(0.000023*size.x*size.y), layer_depth(.stageFG)+2, stage.bounds)
 		
 		// append(&stage.render_depth_list_static_entries, DepthListEntry{
-		// 	DEPTH_MAX + 99,
+		// 	layer_depth(.stageBG) + 99,
 		// 	DepthListEntryCallback{proc(){
 		// 		shader_set(sh.leaves)
 		// 		shader_uniform_set(sh.leaves, "lightColor", stage.backgroundColor)

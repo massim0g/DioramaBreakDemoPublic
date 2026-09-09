@@ -60,7 +60,8 @@ using self
 #partial switch event{
 case .init:
 	equipmentCharacter = .pro
-case .drawEnd:
+case .draw:
+	render_depth_ui(.menus)
 	if dialogue.current != nil do return
 	switch currentPage{
 		case .main:

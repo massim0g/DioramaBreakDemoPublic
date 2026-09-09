@@ -62,11 +62,14 @@ case .init:
 	tex_target_clear()
 
 case .draw:
-	shader_set(sh.meditationBG)
-	shader_uniform_set(sh.meditationBG, "time", f32(time.frame))
-	shader_uniform_set(sh.meditationBG, "strength", f32(perlinStrength))
-	shader_uniform_set(sh.meditationBG, "scale", f32(5.5))
-	tex_draw_ex(myTex, camera_pos(), alpha=alpha)
+	shader_set(Sh_MeditationBG{
+		time = f32(time.frame),
+		strength = f32(perlinStrength),
+		scale = 5.5,
+	})
+	camera_set(0)
+	tex_draw_ex(myTex, Vec2{}, alpha=alpha)
+	camera_reset()
 	shader_reset()
 	
 case .clean:

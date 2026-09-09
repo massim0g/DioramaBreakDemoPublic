@@ -13,7 +13,7 @@ interference_seq :: proc(duration:int) -> bool{
 			entity_make(InterferenceEffect)
 			bg := entity_make(MeditationBG)
 			player,ok := cofind(Player, 0)
-			bg.depth = ok ? player.stageEntity.depth.(f32) + 0.5 : -DEPTH_MAX + 0.5
+			bg.depth = ok ? player.stageEntity.depth + 0.5 : layer_depth(.stageFG) + 0.5
 			bg.perlinStrength = 0.36
 			audio_play(au.dioramaEntryBuzz)
 		}
@@ -43,7 +43,7 @@ self := cast(^InterferenceEffect)base
 using self
 #partial switch event{
 case .init:
-	depth = -DEPTH_MAX
+	depth = layer_depth(.stageFG)
 	alpha = 1
 case .draw:
 	camera_set(0)

@@ -36,6 +36,7 @@ SequenceDeferredDraw :: struct{
 	callback:Callback,
 	contextSeq:^Sequence,
 	depth:f32,
+	frame:int,   //captured at the seq_draw call, so callback-side seq_time/seq_cue match the update's numbering even though seq_close advances the sequence in between
 	cueProg:f32, //allows you to use cue_map procs without resetting the cue inside the callback
 	useStageCameraPos:bool
 }
@@ -210,31 +211,42 @@ seq_map_arr :: #force_inline proc "contextless" (start,end:[$N]f32, curve:^Curve
 }
 seq_map :: proc{seq_map_val, seq_map_arr}
 
-//Defers a draw call to draw on top of the stage (and most UI, though not dialogue). 
-//Will keep sequence context.
+//Defers a draw call to draw on top of the stage (and most UI, though not dialogue).
+//Will keep sequence context, including the frame the call was made on.
 //DO NOT CALL ON THE SAME FRAME THE SEQUENCE CLOSES. todo: clean up the deferred draws when the sequence ends for safety?
-seq_draw :: proc(callback:Callback, depth:=-INF, useStageCameraPos:Maybe(bool)=nil){
-	uscp := useStageCameraPos.? or_else (depth != -INF)
+seq_draw :: proc(callback:Callback, depth:DepthUnion=.seqDraws, useStageCameraPos:Maybe(bool)=nil){
+	d := depthUnion_depth(depth)
 	append(&seq._deferred_draws, SequenceDeferredDraw{
 		callback,
 		peek(seq.context_seq_stack),
-		depth,
+		d,
+		peek(seq.context_seq_stack).frame,
 		seq.cue_prog,
-		uscp
+		useStageCameraPos.? or_else d > layer_depth(.ui)
 	})
 }
 
-//draws top-level deferred draws then clears the buffer
+//Runs a deferred draw callback with its sequence context, captured frame and cue progress restored. Cameras are the caller's job.
+_sequence_deferred_draw_call :: proc(dd:SequenceDeferredDraw){
+	append(&seq.context_seq_stack, dd.contextSeq)
+	storedFrame := dd.contextSeq.frame
+	dd.contextSeq.frame = dd.frame
+	seq.cue_prog = dd.cueProg
+	callback_call(dd.callback)
+	dd.contextSeq.frame = storedFrame
+	pop(&seq.context_seq_stack)
+}
+
+//draws all deferred draws then clears the buffer
 _sequence_deferred_draws_draw :: proc(){
-	for dd in seq._deferred_draws{
-		if dd.depth != -INF do continue
-		append(&seq.context_seq_stack, dd.contextSeq)
-		if dd.useStageCameraPos do camera_set(stage.camera_pos)
-		seq.cue_prog = dd.cueProg
-		callback_call(dd.callback)
-		if dd.useStageCameraPos do camera_reset()
-		pop(&seq.context_seq_stack)
+	if len(seq._deferred_draws) == 0 do return
+
+	for &dd in seq._deferred_draws{
+		render_depth(dd.depth)
+		camera_set(dd.useStageCameraPos ? stage_camera_pos() : Vec2{})
+		_sequence_deferred_draw_call(dd)
 	}
+	camera_reset(len(seq._deferred_draws))
 	clear(&seq._deferred_draws)
 }
 

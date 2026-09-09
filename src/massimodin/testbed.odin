@@ -1,29 +1,24 @@
 package massimodin //@nested-tags:_main
 
-import "../sdl2"
 import "core:reflect"
 import "core:odin/ast"
 import "core:prof/spall"
 import "core:mem"
 import "core:mem/virtual"
-import "core:os"
 import "../tinyfd"
 import "core:strings"
 import "core:path/filepath"
 import "core:encoding/json"
-import slices "core:slice"
 import "../imgui"
-import gl "vendor:OpenGL"
 import "base:intrinsics"
 
 _testbed_pre_init :: proc(){
-
 }
 
 _testbed_post_init :: proc(){
 
 	titleScreen_goto()
-	//stage_goto(st.prosRoom)
+	//stage_goto(st.townCenter)
 
 	//player_character_join_party(.minima)
 	//player_follower_add("minima")
@@ -48,8 +43,6 @@ _testbed_post_init :: proc(){
 
 
 _testbed_update :: proc(){
-	
-
 }
 
 _testbed_draw :: proc(){
@@ -174,9 +167,9 @@ _testbed_equipment :: proc(){
 		// 	smokeParticleGray_.colors = COLOR_GRAY
 		// 	smokeParticleGray := particle_type_clone(smokeParticleGray_)
 
-		// 	particles_emit(smokeParticleGray, 100, -DEPTH_MAX+2, Rect{mouse_stage_pos(), 1})
-		// 	particles_emit(smokeParticleWhite, 600, -DEPTH_MAX, Rect{mouse_stage_pos(), 1})
-		// 	particles_emit(smokeParticleGray, 100, -DEPTH_MAX-2, Rect{mouse_stage_pos(), 1})
+		// 	particles_emit(smokeParticleGray, 100, layer_depth(.stageFG)+2, Rect{mouse_stage_pos(), 1})
+		// 	particles_emit(smokeParticleWhite, 600, layer_depth(.stageFG), Rect{mouse_stage_pos(), 1})
+		// 	particles_emit(smokeParticleGray, 100, layer_depth(.stageFG)-2, Rect{mouse_stage_pos(), 1})
 		// }
 
 //DRAW
@@ -212,10 +205,10 @@ _testbed_equipment :: proc(){
 		//tex_draw(foliage_system.test_blob, mouse_display_pos()-100)
 		//tex_draw(stage.shadow_map, 0, 0)
 
-		//dst := sdl2.Rect{i32(-stage.camera_pos.x), i32(-stage.camera_pos.y), 4096, 4096}
-		//sdl2.RenderCopy(display._renderer, foliage_system.texture_page, nil, &dst)
+		//dst := sdl3.Rect{i32(-stage.camera_pos.x), i32(-stage.camera_pos.y), 4096, 4096}
+		//sdl3.RenderCopy(display._renderer, foliage_system.texture_page, nil, &dst)
 		
-		// dst := sdl2.Rect{10, 10,0,0}
+		// dst := sdl3.Rect{10, 10,0,0}
 		// for type in foliage_system.blob_frame_positions{
 		// 	src := type[0]
 		// 	if dst.x+src.w >= DISPLAY_WIDTH-10{
@@ -224,7 +217,7 @@ _testbed_equipment :: proc(){
 		// 	}
 		// 	dst.w = src.w
 		// 	dst.h = src.h
-		// 	sdl2.RenderCopy(display._renderer, foliage_system.texture_page, &src, &dst)
+		// 	sdl3.RenderCopy(display._renderer, foliage_system.texture_page, &src, &dst)
 		// 	dst.x += src.w
 		// }
 

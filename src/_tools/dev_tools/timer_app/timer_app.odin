@@ -1,9 +1,9 @@
 package timer_app
 
 import "../../../imgui"
-import impl "../../../imgui/imgui_impl_sdl2"
-import implr "../../../imgui/imgui_impl_sdlrenderer2"
-import "../../../sdl2"
+import impl "../../../imgui/imgui_impl_sdl3"
+import implr "../../../imgui/imgui_impl_sdlrenderer3"
+import "../../../sdl3"
 import "core:time"
 import "core:fmt"
 import "core:strings"
@@ -13,20 +13,14 @@ print :: fmt.println
 
 main :: proc() {
 	//init
-	displaySize := imgui.Vector2{640, 360}
-    sdl2.SetHint(sdl2.HINT_RENDER_SCALE_QUALITY, "0")
-	sdl2.SetHint(sdl2.HINT_RENDER_VSYNC, "1")
-	sdl2.SetHint(sdl2.HINT_RENDER_DRIVER, "opengl")
+	displaySize := imgui.Vec2{640, 360}
+	sdl3.SetHint(sdl3.HINT_RENDER_VSYNC, "1")
 
-	sdl2.Init(sdl2.INIT_VIDEO)
-	window := sdl2.CreateWindow("Timer",
-        sdl2.WINDOWPOS_CENTERED, sdl2.WINDOWPOS_CENTERED,
-		i32(displaySize.x), i32(displaySize.y),
-        {.SHOWN, .OPENGL}
-	)
-	renderer := sdl2.CreateRenderer(window, -1, sdl2.RENDERER_ACCELERATED)
-	assert(renderer != nil, string(sdl2.GetError()))
-	sdl2.SetWindowIcon(window, sdl2.LoadBMP(strings.clone_to_cstring(filepath.join({#location().file_path, "../time.bmp"}) or_else "")))
+	_ = sdl3.Init(sdl3.INIT_VIDEO)
+	window := sdl3.CreateWindow("Timer", i32(displaySize.x), i32(displaySize.y), {})
+	renderer := sdl3.CreateRenderer(window, nil)
+	assert(renderer != nil, string(sdl3.GetError()))
+	sdl3.SetWindowIcon(window, sdl3.LoadBMP(strings.clone_to_cstring(filepath.join({#location().file_path, "../time.bmp"}) or_else "")))
 
     ctx := imgui.CreateContext()
 	
@@ -35,7 +29,7 @@ main :: proc() {
 
 	imgui.GetIO().ConfigFlags += {.NavEnableKeyboard}
 
-	e:sdl2.SDLEvent
+	e:sdl3.Event
 	quit:bool
 
 	//stopwatch vars
@@ -44,10 +38,10 @@ main :: proc() {
 	oldElapsedTime:i64
 	currentElapsedTime:i64
 
-	imgui.GetIO().FontGlobalScale = 4
+	imgui.GetStyle().FontScaleMain = 4
 
     for !quit{
-		for sdl2.PollEvent(&e){
+		for sdl3.PollEvent(&e){
 			if e.type == .QUIT do quit = true
 
 			impl.ProcessEvent(&e)
@@ -101,12 +95,12 @@ main :: proc() {
 		imgui.Text("%.0f frames", f64(watchTime)/1000000000.*60.)
         imgui.End()
 
-		sdl2.RenderClear(renderer)
+		sdl3.RenderClear(renderer)
         imgui.Render()
-		implr.RenderDrawData(imgui.GetDrawData())
-		sdl2.RenderPresent(renderer)
+		implr.RenderDrawData(imgui.GetDrawData(), renderer)
+		sdl3.RenderPresent(renderer)
 		free_all(context.temp_allocator)
     }
 
-    sdl2.Quit()
+    sdl3.Quit()
 }

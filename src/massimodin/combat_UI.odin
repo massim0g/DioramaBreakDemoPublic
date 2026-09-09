@@ -3,7 +3,7 @@ package massimodin //@nested-tags:combat/
 
 import slices "core:slice"
 import "core:reflect"
-import "../sdl2"
+import "../sdl3"
 
 COMBAT_RESOLVE_ELLIPSE := Ellipse{Vec2{DISPLAY_WIDTH-1, 0}, DISPLAY_SIZE/4}
 
@@ -237,16 +237,13 @@ _combat_action_select_menu_draw :: proc(){
 	drawTex := tex_make(DISPLAY_SIZE)
 	defer tex_destroy(drawTex)
 
-	camPos := camera_pos()
-	tex_target_set(drawTex, camPos)
+	tex_target_set(drawTex)
 
 	queueFull := combatUnit_action_queue_full(combat.selected_unit)
 
 	i := 0
 	for a:=90; a>-270; a-=COMBAT_ACTION_SELECT_MENU_SPACING{
 		buttonPos := vec2_offset(f32(a), drawRadius, centerPos)
-
-		bm := BlendMode.none
 
 		col := COLOR_WHITE
 		alpha :f32= 1
@@ -261,20 +258,28 @@ _combat_action_select_menu_draw :: proc(){
 		action :^CombatAction
 		switch i{
 			case 0: //wait
-				sprite_draw_ex(sp.combatActionIcons_wait, buttonPos, color=col, alpha=alpha, blendmode=bm)
+				blendmode_set(.none)
+				sprite_draw_ex(sp.combatActionIcons_wait, buttonPos, color=col, alpha=alpha)
+				blendmode_set(.blend)
 				action = ca.wait
 			case 1: //basic movement
-				sprite_draw_ex(sp.combatActionIcons_movement, buttonPos, color=col, alpha=alpha, blendmode=bm)
+				blendmode_set(.none)
+				sprite_draw_ex(sp.combatActionIcons_movement, buttonPos, color=col, alpha=alpha)
+				blendmode_set(.blend)
 				action = ca.movement
 			case COMBAT_ACTION_SELECT_MENU_MAX_IND - 1: //unqueue action
 				if(len(combat.selected_unit.queuedActions) > 0 && !combatActionQueued_started(peek_ptr(&combat.selected_unit.queuedActions))){
-					sprite_draw_ex(sp.miscCombatIcons_undo, buttonPos, int(hovering), color=col, alpha=alpha, blendmode=bm)
+					blendmode_set(.none)
+					sprite_draw_ex(sp.miscCombatIcons_undo, buttonPos, int(hovering), color=col, alpha=alpha)
+					blendmode_set(.blend)
 					if input_device() == .gamepad{
 						text_draw("LT", buttonPos + {3,2}, COLOR_WHITE, font=fo.yal5w3__16)
 					}
 				}
 			case COMBAT_ACTION_SELECT_MENU_MAX_IND: //close
-				sprite_draw_ex(sp.miscCombatIcons_close, buttonPos, int(hovering), color=col, alpha=alpha, blendmode=bm)
+				blendmode_set(.none)
+				sprite_draw_ex(sp.miscCombatIcons_close, buttonPos, int(hovering), color=col, alpha=alpha)
+				blendmode_set(.blend)
 				if input_device() == .gamepad{
 					text_draw("B", buttonPos + {3,2}, COLOR_WHITE, font=fo.yal5w3__16)
 				}
@@ -282,7 +287,9 @@ _combat_action_select_menu_draw :: proc(){
 				actionInd := i - 2
 				if(actionInd < len(combat.selected_unit.equippedActions)){
 					action = combat.selected_unit.equippedActions[actionInd]
-					sprite_draw_ex(action.actionSelectIcon, buttonPos, color=col, alpha=alpha, blendmode=bm)
+					blendmode_set(.none)
+					sprite_draw_ex(action.actionSelectIcon, buttonPos, color=col, alpha=alpha)
+					blendmode_set(.blend)
 				}
 		}
 		if action != nil && hovering {
@@ -300,12 +307,11 @@ _combat_action_select_menu_draw :: proc(){
 
 	tex_target_reset()
 
-	
-	shader_set(sh.colorOnly)
-	tex_draw_ex(drawTex, camPos + {1,0}, color=COLOR_BLACK)
-	tex_draw_ex(drawTex, camPos + 1, color=COLOR_BLACK)
+	shader_set(Sh_ColorOnly)
+	tex_draw_ex(drawTex, 1, 0, color=COLOR_BLACK)
+	tex_draw_ex(drawTex, 1, 1, color=COLOR_BLACK)
 	shader_reset()
-	tex_draw(drawTex, camPos)
+	tex_draw(drawTex, 0, 0)
 
 }
 
@@ -345,7 +351,7 @@ _combat_action_inspect_draw :: proc(){
 	drawTex := tex_make(DISPLAY_SIZE)
 	defer tex_destroy(drawTex)
 
-	tex_target_set(drawTex, camera_pos())
+	tex_target_set(drawTex, stage.camera_pos)
 		drawRect := sprite_draw_rect(combatUnitGhostDrawData_sprite(unit, drawData), drawData.pos, 0, Vec2{drawData.dir ==.left?-1:1,1})
 		drawPos := Vec2{rect_get_right(drawRect) + ui_cue_map("combat_action_select_menu", 0, 3, -6, 0), drawRect.y}
 		for action in actions{
@@ -355,7 +361,7 @@ _combat_action_inspect_draw :: proc(){
 	tex_target_reset()
 	camera_reset()
 
-	shader_set(sh.colorOnly)
+	shader_set(Sh_ColorOnly)
 	tex_draw_ex(drawTex, Vec2{1,0}, color=COLOR_BLACK)
 	tex_draw_ex(drawTex, 1, color=COLOR_BLACK)
 	shader_reset()
@@ -533,12 +539,12 @@ _combat_action_targeting_draw :: proc(){
 		tex_target_set(combat.grid_buffer_tex_a)
 			tex_draw(combat.grid_tex, 0,0)
 		tex_target_set(combat.grid_tex, {0,0}, false)
-			shader_set(sh.aimingRings)
-			shader_uniform_set(sh.aimingRings, "texSize", Vec2(combat.grid_tex.size))
-			shader_uniform_set(sh.aimingRings, "outlineRevealAngle", ui_cue_map("actionTargeting", 0, 12, 0, 90, cu.easeIn))
-			shader_uniform_set(sh.aimingRings, "centerPos", combatUnit_draw_pos(unit, combatUnit_ghost_position(unit)))
-			shader_texture_bind(sh.aimingRings, "destination", combat.grid_buffer_tex_a)
-			defer shader_texture_unbind(combat.grid_buffer_tex_a)
+			shader_set(Sh_AimingRings{
+				texSize = Vec2(combat.grid_tex.size),
+				outlineRevealAngle = ui_cue_map("actionTargeting", 0, 12, 0, 90, cu.easeIn),
+				centerPos = combatUnit_draw_pos(unit, combatUnit_ghost_position(unit)),
+			})
+			shader_texture_bind("destination", combat.grid_buffer_tex_a)
 			tex_draw_ex(combat.aiming_ring_mask_tex, 0, 0, alpha=ui_cue_map("actionTargeting", 0, 15, 0, 0.1, cu.easeIn))
 			shader_reset()
 		tex_target_reset(3)
@@ -552,7 +558,9 @@ _combat_action_targeting_draw :: proc(){
 			if unit.drawAttackWarningLevel > 0{
 				drawCol = color_lerp(drawCol, color_hex(unit.drawAttackWarningLevel == 1 ? 0xffc20a:0xcc2d20), wave(0,0.4,50))
 			}
-			draw_rect(drawRect, drawCol, 0.5, BlendMode.one)
+			blendmode_set(.one)
+			draw_rect(drawRect, drawCol, 0.5)
+			blendmode_set(.blend)
 
 			drawPath := make([]Vec2, ringDist+2)
 			pathPos := combatUnit_ghost_position(unit)
@@ -619,14 +627,14 @@ combat_timeline_break :: proc(unit:^CombatUnit, spawnParticles:=true){
 			main,bar,start,inProgress,end := combatAction_timeline_sprites(pip.action)
 			for j in 0..<pip.targetState.startup{
 				dx := startX + f32(j)*pipsXOff
-				if j == 0 do particles_emit(particle_type_clone(combat.timeline_break_particle, (pip.targetState.timelinePos - pip.targetState.startup == 0) ? inProgress : start), 1, -INF, Rect{{dx,drawY}, 0})
-				else do particles_emit(particle_type_clone(combat.timeline_break_particle, bar), 1, -INF, Rect{{dx,drawY}, 0})
+				if j == 0 do particles_emit(particle_type_clone(combat.timeline_break_particle, (pip.targetState.timelinePos - pip.targetState.startup == 0) ? inProgress : start), 1, layer_depth(.uiTop), Rect{{dx,drawY}, 0})
+				else do particles_emit(particle_type_clone(combat.timeline_break_particle, bar), 1, layer_depth(.uiTop), Rect{{dx,drawY}, 0})
 			}
-			if main != nil do particles_emit(particle_type_clone(combat.timeline_break_particle, main), 1, -INF, Rect{{mainX, drawY}, 0})
+			if main != nil do particles_emit(particle_type_clone(combat.timeline_break_particle, main), 1, layer_depth(.uiTop), Rect{{mainX, drawY}, 0})
 			for j in 0..<pip.cooldown{
 				dx := mainX + f32(j+1)*pipsXOff
-				if j == pip.cooldown-1 do particles_emit(particle_type_clone(combat.timeline_break_particle, sp.timelinePips_cooldown1_end), 1, -INF, Rect{{dx,drawY}, 0})
-				else do particles_emit(particle_type_clone(combat.timeline_break_particle, sp.timelinePips_cooldown1_bar), 1, -INF, Rect{{dx,drawY}, 0})
+				if j == pip.cooldown-1 do particles_emit(particle_type_clone(combat.timeline_break_particle, sp.timelinePips_cooldown1_end), 1, layer_depth(.uiTop), Rect{{dx,drawY}, 0})
+				else do particles_emit(particle_type_clone(combat.timeline_break_particle, sp.timelinePips_cooldown1_bar), 1, layer_depth(.uiTop), Rect{{dx,drawY}, 0})
 			}
 		}
 		i+=1
@@ -900,7 +908,7 @@ _combat_timeline_update :: proc(){
 				}
 			}
 
-			// particles_emit(particle_type(sp.shineRing, sprite_duration(sp.shineRing), angleSpread=0), 1, -INF, Rect{{
+			// particles_emit(particle_type(sp.shineRing, sprite_duration(sp.shineRing), angleSpread=0), 1, layer_depth(.uiTop), Rect{{
 			// 	COMBAT_TIMELINE_X + COMBAT_TIMELINE_PIPS_X+5-1, 
 			// 	drawYs[combat.timeline_resolve_time.head] + (DISPLAY_HEIGHT/2 - combat_timeline_box_size().y/2)+f32(sp.timelinePips_wait.origin.y)-1
 			// }, 0})
@@ -964,10 +972,11 @@ _combat_timeline_draw :: proc(){
 	totalStepsToDraw := extraSteps+COMBAT_RESOLVE_INTERVAL+1
 	frameSegTex := tex_make(boxSizeFull.x,sp.timelineBaseFrame_solo.size.y)
 	defer tex_destroy(frameSegTex)
-	frameOrigin := Vec2(transmute([2]i32)sp.timelineBaseFrame_solo.origin)
+	frameOrigin := sp.timelineBaseFrame_solo.origin
 	turnLineDrawInfo := make([dynamic][2]f32, context.temp_allocator)
 	stepLineDrawInfo := make([dynamic][2]f32, context.temp_allocator)
 	tex_target_set(frameSegTex, -frameOrigin)
+		blendmode_set(.one)
 		prog := ui_cue_map("timelineShift", 0, COMBAT_TIMELINE_PIP_SHIFT_TIME, 0, 1)
 		for n in -1..<totalStepsToDraw{
 			curStep := n+combat.timeline_resolve_time.step
@@ -975,20 +984,21 @@ _combat_timeline_draw :: proc(){
 			alpha :f32= 1
 			if n == totalStepsToDraw-1{
 				alpha = prog
-				sprite_draw_ex(sp.timelineBaseFrame_stepSegment_edge, drawX, 0, alpha=alpha, blendmode=BlendMode.one)
+				sprite_draw_ex(sp.timelineBaseFrame_stepSegment_edge, drawX, 0, alpha=alpha)
 			}
 			else{
 				if n == -1 do alpha = 1-prog
-				sprite_draw_ex(sp.timelineBaseFrame_stepSegment, drawX, 0, alpha=alpha, blendmode=BlendMode.one)
+				sprite_draw_ex(sp.timelineBaseFrame_stepSegment, drawX, 0, alpha=alpha)
 			}
 
 			if curStep%COMBAT_RESOLVE_INTERVAL == 0{
-				sprite_draw_ex(n <= 0?sp.timelineBaseFrame_turnLineMiddle_current:sp.timelineBaseFrame_turnLineMiddle, drawX, 0, alpha=alpha, blendmode=BlendMode.one)
+				sprite_draw_ex(n <= 0?sp.timelineBaseFrame_turnLineMiddle_current:sp.timelineBaseFrame_turnLineMiddle, drawX, 0, alpha=alpha)
 				append(&turnLineDrawInfo, [2]f32{drawX, alpha})
 			}
 
 			if n%2 == 1 do append(&stepLineDrawInfo, [2]f32{drawX+4, alpha})
 		}
+		blendmode_set(.blend)
 
 	
 
@@ -997,7 +1007,7 @@ _combat_timeline_draw :: proc(){
 	defer tex_destroy(timelineTex)
 	defer tex_destroy(timelineBufferTex)
 	tex_target_set(timelineTex, boxSizeFull - boxPopupSize)
-		tex_draw(display_main_tex(), boxSizeFull - boxPopupSize - boxPos) //for alpha blending
+		display_window_tex_draw(boxSizeFull - boxPopupSize - boxPos) //for alpha blending
 		uncommitCol :Color: 191 //gray, 191/255
 
 		//step lines
@@ -1235,9 +1245,9 @@ _combat_timeline_draw :: proc(){
 
 
 				// shader_set(sh.screen)
-				// shader_texture_bind(sh.screen, "destination", timelineBufferTex)
+				// shader_texture_bind("destination", timelineBufferTex)
 				// defer shader_texture_unbind(timelineBufferTex)
-				// shader_uniform_set(sh.screen, "destRect", Rect{texDrawPos - camera_pos(), Vec2(drawTex.size)})
+				// shader_uniform_set(sh.screen, "destRect", Rect{texDrawPos - camera.pos, Vec2(drawTex.size)})
 				// shader_uniform_set(sh.screen, "destSize", Vec2(timelineBufferTex.size))
 				// tex_draw(drawTex, texDrawPos)
 				// shader_reset()
@@ -1317,20 +1327,20 @@ _combat_timeline_draw_OLD :: proc(){
 		}
 	}
 
-    black :: sdl2.Color{0,0,0,255}
-    blank :: sdl2.Color{0,0,0,0}
+    black :: Blend{0,0,0,255}
+    blank :: Blend{0,0,0,0}
 	gradientW :f32= 112
-    vertices := [6]sdl2.Vertex{
+    vertices := [6]Vertex{
         // first triangle (top-left, bottom-left, top-right)
-        sdl2.Vertex{ position = sdl2.FPoint{0, 0}, color = black},
-        sdl2.Vertex{ position = sdl2.FPoint{0, DISPLAY_SIZE.y}, color = black},
-        sdl2.Vertex{ position = sdl2.FPoint{gradientW, 0}, color = blank},
-        sdl2.Vertex{ position = sdl2.FPoint{0, DISPLAY_SIZE.y}, color = black},
-        sdl2.Vertex{ position = sdl2.FPoint{gradientW, DISPLAY_SIZE.y}, color = blank},
-        sdl2.Vertex{ position = sdl2.FPoint{gradientW, 0}, color = blank},
+        {pos = {0, 0}, blend = black},
+        {pos = {0, DISPLAY_SIZE.y}, blend = black},
+        {pos = {gradientW, 0}, blend = blank},
+        {pos = {0, DISPLAY_SIZE.y}, blend = black},
+        {pos = {gradientW, DISPLAY_SIZE.y}, blend = blank},
+        {pos = {gradientW, 0}, blend = blank},
     }
 
-    sdl2.RenderGeometry(display._renderer, nil, raw_data(vertices[:]), 6, nil, 0)
+	draw_mesh_blank(vertices[:])
 
 	beadSize := sp.timelineIdleBead.size.x
 	previewAlpha :: 0.5
@@ -1471,9 +1481,8 @@ combat_timeline_draw_read_order :: proc(baseAlpha:f32){
 	draw_rect(Rect{boxPos, boxSize}, COLOR_BLACK, 0.3*baseAlpha)
 	// Draw zigzag lines
 	drawCol := color_hex(0xffe4aa)
-	draw_color(drawCol, u8(alpha * 255))
 	for i in 0..<numVerts-1{
-		draw_line(verts[i], verts[i+1])
+		draw_line(verts[i], verts[i+1], color=drawCol, alpha=alpha)
 	}
 
 	arrowLoopDuration :: 66
@@ -1495,7 +1504,7 @@ combat_timeline_draw_read_order :: proc(baseAlpha:f32){
 combat_shader_set :: proc(active:bool){
 	if combat.time_stop_mode != .enabledWithEffect do return
 	
-	shader_uniform_set(sh.stage, "timeStopEffect", active)
+	shader_params_set_by_name(Sh_Stage, {"timeStopEffect", i32(active)})
 
 	combat.time_stop_shader_set = active
 }
@@ -1503,11 +1512,10 @@ combat_shader_set :: proc(active:bool){
 //GRID
 combat_movement_path_draw :: proc(drawPath:[]Vec2, attackWarningStartInd:=-1){
 	pathCol := color_hex(0xa4c245)
-	draw_color(pathCol, 255/3)
 	if len(drawPath) > 1{
 		for pos, i in drawPath[1:]{
-			if i == attackWarningStartInd do draw_color(color_lerp(pathCol, color_hex(0xcc2d20), wave(0,0.4,50)), 255/3)
-			draw_line(pos, drawPath[i])
+			if i == attackWarningStartInd do pathCol = color_lerp(pathCol, color_hex(0xcc2d20), wave(0,0.4,50))
+			draw_line(pos, drawPath[i], color=pathCol, alpha=1./3.)
 		}
 	}
 	pathCol = color_hex(0xe5eec9)
@@ -1515,13 +1523,12 @@ combat_movement_path_draw :: proc(drawPath:[]Vec2, attackWarningStartInd:=-1){
 		if i == attackWarningStartInd do pathCol = color_lerp(pathCol, color_hex(0xcc2d20), wave(0,0.4,50))
 		sprite_draw_ex(sp.pathShine, pos, sprite_frame_get(sp.pathShine), 1, 0, pathCol, 0.75)
 	}
-	draw_color(COLOR_WHITE, 255)
 }
 
 //Draws the combat grid, as well as any floor-depth UI
 _combat_grid_draw :: proc(){
 	planning := combat.phase == .planning
-	shader_set(shaders._base_shader)
+	shader_set(Sh_Base)
 	//subtraction mask
 	// tex_target_set(combat.grid_subtract_mask_tex, stage.camera_pos)
 	// 	combatEntities := coall(CombatEntity)
@@ -1540,7 +1547,7 @@ _combat_grid_draw :: proc(){
 		units := combatUnits_get()
 
 		//revealed areas
-		draw_blendmode(.alphaMax)
+		blendmode_set(.alphaMax)
 		//draw_ellipse(mouse_stage_pos(), COMBAT_TILE_SIZE*2, innerAlpha=0.25, outerAlpha=0.25)
 		if planning do draw_ellipse(mouse_stage_pos(), COMBAT_TILE_SIZE*3, innerAlpha=0.25, outerAlpha=0)
 
@@ -1555,12 +1562,14 @@ _combat_grid_draw :: proc(){
 		for ripple in combat.grid_ripples{
 			draw_rings(ripple.pos, {ripple.radii, ripple.radii - COMBAT_RIPPLE_OUTER_THICKNESS, ripple.radii - COMBAT_RIPPLE_OUTER_THICKNESS,  ripple.radii - (COMBAT_RIPPLE_OUTER_THICKNESS+COMBAT_RIPPLE_MIDDLE_THICKNESS), ripple.radii - (COMBAT_RIPPLE_OUTER_THICKNESS+COMBAT_RIPPLE_MIDDLE_THICKNESS), ripple.radii - COMBAT_RIPPLE_THICKNESS}, alphas=alphas)
 		}
-		draw_blendmode(.blend)
+		blendmode_set(.blend)
 
 		//masks
 		for unit in units{
 			for pos, i in unit.ghostPositions{
-				draw_rect(combatUnit_stage_rect(unit, pos), COLOR_WHITE, 0.1, BlendMode.one)
+				blendmode_set(.one)
+				draw_rect(combatUnit_stage_rect(unit, pos), COLOR_WHITE, 0.1)
+				blendmode_set(.blend)
 			}
 		}
 	
@@ -1570,7 +1579,9 @@ _combat_grid_draw :: proc(){
 	gridDrawPos := floor((stage.camera_pos-gridStageOffset)/COMBAT_TILE_SIZE)*COMBAT_TILE_SIZE + gridStageOffset
 	tex_target_set(combat.grid_buffer_tex_a, stage.camera_pos)
 		tex_draw_ex(combat.grid_base_tex, gridDrawPos)
+		blendmode_set(.subtractInverse)
 		tex_draw(combat.grid_tex_alpha_mask, stage.camera_pos)
+		blendmode_set(.blend)
 	
 	//draw final combat grid
 	tex_target_set(combat.grid_tex, stage.camera_pos, false)
@@ -1578,12 +1589,12 @@ _combat_grid_draw :: proc(){
 		tex_draw(display_main_tex(), stage.camera_pos)
 
 		//draw revealed combat grid using shader for animated effect
-		shader_set(sh.gridBase)
-		shader_uniform_set(sh.gridBase, "texture", i32(0))
-		shader_uniform_set(sh.gridBase, "texSize", Vec2(combat.grid_tex.size))
-		shader_uniform_set(sh.gridBase, "tileSize", COMBAT_TILE_SIZE)
-		shader_uniform_set(sh.gridBase, "gridDisplayPos", gridDrawPos-stage.camera_pos)
-		shader_uniform_set(sh.gridBase, "time", time.frame)
+		shader_set(Sh_GridBase{
+			texSize = Vec2(combat.grid_tex.size),
+			tileSize = COMBAT_TILE_SIZE,
+			gridDisplayPos = gridDrawPos-stage.camera_pos,
+			time = i32(time.frame),
+		})
 		tex_draw(combat.grid_buffer_tex_a, stage.camera_pos)
 		shader_reset()
 
@@ -1592,7 +1603,7 @@ _combat_grid_draw :: proc(){
 
 		for block in blocks{
 			drawRect := Rect{combat_to_stage_pos(block.pos, true), Vec2(block.size)*COMBAT_TILE_SIZE}
-			draw_rect_outline(drawRect, COLOR_BLACK, 0.6)
+			draw_rect_outline(drawRect, 1, COLOR_BLACK, 0.6)
 		}
 
 		if planning{
@@ -1603,15 +1614,15 @@ _combat_grid_draw :: proc(){
 					drawRect := combatUnit_stage_rect(unit, pos)
 					if i == len(unit.ghostPositions)-1{
 						if unit.unitState == .alive{
-							draw_rect_outline(drawRect, pal.light, 1)
+							draw_rect_outline(drawRect, 1, pal.light, 1)
 							rect_resize_in_place(&drawRect, -1, -1)
-							draw_rect_outline(drawRect, pal.dark, 1)
+							draw_rect_outline(drawRect, 1, pal.dark, 1)
 							//rect_resize_in_place(&drawRect, -1, -1)
 						}
-						else do draw_rect_outline(drawRect, pal.dark, 1)
+						else do draw_rect_outline(drawRect, 1, pal.dark, 1)
 					}
 					else{
-						draw_rect_outline(drawRect, COLOR_BLACK, 0.6)
+						draw_rect_outline(drawRect, 1, COLOR_BLACK, 0.6)
 						//rect_resize_in_place(&drawRect, -2, -2)
 					}
 				}
@@ -1650,9 +1661,9 @@ _combat_grid_draw :: proc(){
 				pal := palettes[unit.unitType]
 				drawRect := Rect{unit.stageCharacter.transform.pos, Vec2(unit.combatEntity.size)*COMBAT_TILE_SIZE}
 				drawRect.pos -= drawRect.size/2
-				draw_rect_outline(drawRect, pal.light, 1)
+				draw_rect_outline(drawRect, 1, pal.light, 1)
 				rect_resize_in_place(&drawRect, -1, -1)
-				draw_rect_outline(drawRect, pal.dark, 1)
+				draw_rect_outline(drawRect, 1, pal.dark, 1)
 				rect_resize_in_place(&drawRect, -1, -1)
 			}
 
@@ -1724,11 +1735,12 @@ _combat_grid_draw :: proc(){
 		}
 
 		tex_target_set(combat.action_targets_stencil_tex, stage.camera_pos)
+			blendmode_set(.alphaOnly)
 			for info in combat.action_targets_to_draw{
 				using info
-				tex_blendmode_set(drawTex, .alphaOnly)
 				tex_draw_ex(drawTex, drawPos, alpha=1./16.)
 			}
+			blendmode_set(.blend)
 		tex_target_reset()
 
 		//hoevered action aiming rings
@@ -1746,28 +1758,34 @@ _combat_grid_draw :: proc(){
 		}
 
 		//action targets
-		shader_set(sh.actionTarget)
-		shader_texture_bind(sh.actionTarget, "stencilTex", combat.action_targets_stencil_tex)
-		shader_uniform_set(sh.actionTarget, "stencilTexSize", Vec2(combat.action_targets_stencil_tex.size))
+		shader_set(Sh_ActionTarget)
+		shader_texture_bind("stencilTex", combat.action_targets_stencil_tex)
+		stencilTexSize := Vec2(combat.action_targets_stencil_tex.size)
+
 		//fill pass
-		shader_uniform_set(sh.actionTarget, "drawMode", i32(0))
 		for info in combat.action_targets_to_draw{
 			using info
-			tex_blendmode_set(drawTex, .blend)
-			shader_uniform_set(sh.actionTarget, "texSize", Vec2(drawTex.size))
-			shader_uniform_set(sh.actionTarget, "outlineRevealAngle", f32(90)) //todo
-			shader_uniform_set(sh.actionTarget, "centerPos", combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)))
-			shader_uniform_set(sh.actionTarget, "stencilOffset", drawPos - stage.camera_pos)
+			shader_params_set(Sh_ActionTarget{
+				stencilTexSize = stencilTexSize,
+				drawMode = 0,
+				texSize = Vec2(drawTex.size),
+				outlineRevealAngle = 90, //todo
+				centerPos = combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)),
+				stencilOffset = drawPos - stage.camera_pos,
+			})
 			tex_draw_ex(drawTex, drawPos, color=color, alpha=alpha)
 		}
 		//outline pass
-		shader_uniform_set(sh.actionTarget, "drawMode", i32(1))
 		for info in combat.action_targets_to_draw{
 			using info
-			shader_uniform_set(sh.actionTarget, "texSize", Vec2(drawTex.size))
-			shader_uniform_set(sh.actionTarget, "outlineRevealAngle", f32(90)) //todo
-			shader_uniform_set(sh.actionTarget, "centerPos", combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)))
-			shader_uniform_set(sh.actionTarget, "stencilOffset", drawPos - stage.camera_pos)
+			shader_params_set(Sh_ActionTarget{
+				stencilTexSize = stencilTexSize,
+				drawMode = 1,
+				texSize = Vec2(drawTex.size),
+				outlineRevealAngle = 90, //todo
+				centerPos = combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)),
+				stencilOffset = drawPos - stage.camera_pos,
+			})
 			tex_draw_ex(drawTex, drawPos, color=color, alpha=outlineAlpha)
 		}
 		shader_reset()
@@ -1778,7 +1796,7 @@ _combat_grid_draw :: proc(){
 		if planning && combat.selected_action != nil do _combat_action_targeting_draw()
 
 		//letterboxes, cut out grid UI if it falls outside the actual combat area
-		cam := camera_rect()
+		cam := stage_camera_rect()
 		gridRect := Rect{combat.grid_stage_pos-{1,1}, Vec2(combat.grid_size)*COMBAT_TILE_SIZE+{2,2}}
 		letterBoxRects := [4]Rect{
 			rect_make_points(cam.pos, 									Vec2{rect_get_right(gridRect), gridRect.y}),
@@ -1787,7 +1805,11 @@ _combat_grid_draw :: proc(){
 			rect_make_points(Vec2{cam.x, gridRect.y}, 					Vec2{gridRect.x, rect_get_bottom(cam)})
 		}
 		for rect in letterBoxRects{
-			if(rect_is_positive(rect)) do draw_rect(rect, COLOR_WHITE, 1, BlendMode.subtract)
+			if(rect_is_positive(rect)){
+				blendmode_set(.subtract)
+				draw_rect(rect, COLOR_WHITE, 1)
+				blendmode_set(.blend)
+			}
 		}
 	tex_target_reset(3)
 
@@ -1828,11 +1850,12 @@ _combat_grid_draw :: proc(){
 		drawRect := ui_cue_map_stateful("combatUnitSelection", 6, targetRect, cu.easeIn, false, ignorePassedTarget=ignoreTarget)
 		drawCol := ui_cue_map_stateful("combatUnitSelection", 6, targetCol, cu.easeIn, false, ignorePassedTarget=ignoreTarget)
 
-		shader_set(sh.combatCursor)
-		shader_uniform_set(sh.combatCursor, "time", f32(time.frame))
-		shader_uniform_set(sh.combatCursor, "rectSize", drawRect.size)
+		shader_set(Sh_CombatCursor{
+			time = f32(time.frame),
+			rectSize = drawRect.size,
+		})
 		ui_cue("combatCursorDraw")
-		tex_draw_ex(shaders.blank_tex, drawRect.pos, drawRect.size, color=drawCol, alpha=ui_cue_map("combatCursorDraw", 1,7,0,1))
+		tex_draw_ex(render.blank_tex, drawRect.pos, drawRect.size, color=drawCol, alpha=ui_cue_map("combatCursorDraw", 1,7,0,1))
 		shader_reset()
 		break
 	}
@@ -1844,32 +1867,32 @@ _combat_grid_draw :: proc(){
 	tex_target_reset()
 }
 _combat_action_target_silhouettes_draw :: proc(){
-	mainTex := display_main_tex_inactive()
+	mainTex := display_snapshot()
 
-	shader_set(sh.actionTarget)
-	shader_texture_bind(sh.actionTarget, "floorTex", combat.grid_buffer_tex_a)
-	shader_texture_bind(sh.actionTarget, "mainTex", mainTex)
-	shader_uniform_set(sh.actionTarget, "floorTexSize", Vec2(mainTex.size))
-	shader_uniform_set(sh.actionTarget, "drawMode", i32(2))
+	shader_set(Sh_ActionTarget)
+	shader_texture_bind("floorTex", combat.grid_buffer_tex_a)
+	shader_texture_bind("mainTex", mainTex)
 	for info in combat.action_targets_to_draw{
 		using info
-		shader_uniform_set(sh.actionTarget, "texSize", Vec2(drawTex.size))
-		shader_uniform_set(sh.actionTarget, "outlineRevealAngle", f32(90)) //todo
-		shader_uniform_set(sh.actionTarget, "centerPos", combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)))
-		shader_uniform_set(sh.actionTarget, "stencilOffset", drawPos - stage.camera_pos)
+		shader_params_set(Sh_ActionTarget{
+			floorTexSize = Vec2(mainTex.size),
+			stencilTexSize = Vec2(combat.action_targets_stencil_tex.size),
+			drawMode = 2,
+			texSize = Vec2(drawTex.size),
+			outlineRevealAngle = 90, //todo
+			centerPos = combatUnit_draw_pos(caq.user, combatUnit_ghost_position(caq.user)),
+			stencilOffset = drawPos - stage.camera_pos,
+		})
 		tex_draw_ex(drawTex, drawPos, color=color, alpha=alpha * 0.15)
 	}
 	shader_reset()
 
 	//cleanup
-	shader_texture_unbind(combat.action_targets_stencil_tex)
-	shader_texture_unbind(combat.grid_buffer_tex_a)
-	shader_texture_unbind(mainTex)
 	for info in combat.action_targets_to_draw{tex_destroy(info.drawTex)}
 	clear(&combat.action_targets_to_draw)
 }
 
-_combat_aim_indicators_append :: proc(entryAppend:proc(depth:f32, entry:DepthListEntry)){
+_combat_aim_indicators_draw :: proc(){
 	tailSize :: 0.667
 	tailSpeed :: 0.02
 	tailHead := mod(f32(time.frame)*tailSpeed, 1+tailSize)
@@ -1914,9 +1937,8 @@ _combat_aim_indicators_append :: proc(entryAppend:proc(depth:f32, entry:DepthLis
 					drawPos := Vec2{projPos.x, projPos.y+projPos.z}
 					if distBehind >= 0 && distBehind <= tailSize{
 						fade := 1 - distBehind/tailSize
-						entryAppend(-projPos.y, DepthListEntryLine{{prevDrawPos, drawPos}, {
-							color_lerp(COLOR_WHITE, tailCol, 1-fade, cu.popIn), fade, .blend
-						}})
+						render_depth(-projPos.y)
+						draw_line(prevDrawPos, drawPos, color=color_lerp(COLOR_WHITE, tailCol, 1-fade, cu.popIn), alpha=fade)
 					}
 					prevDrawPos = drawPos
 				}
@@ -1980,7 +2002,7 @@ _combat_UI_draw :: proc(){
 							sprite_draw_ex(goSprite, seq_map(clockPos, goPos, cu.popIn))
 							sprite_draw_ex(sp.resolveClock_base, clockPos)
 							sprite_draw_ex(sp.resolveClock_hand, clockPos, angle=90)
-							shader_set(sh.colorOnly)
+							shader_set(Sh_ColorOnly)
 							sprite_draw_ex(sp.resolveClock_base, clockPos, alpha=seq_map(1,0, cu.easeInHeavy))
 							shader_reset()
 						}

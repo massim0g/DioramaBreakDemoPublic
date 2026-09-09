@@ -50,7 +50,7 @@ _cutscenes_reload_trailer :: proc(){
 				display.hd_enabled = false
 				stage.target_camera_pos = DISPLAY_SIZE/2
 				spriteEffect_make(sp.continentBG, {-84, 270}, duration=INF)
-				bottomClouds := spriteEffect_make(sp.continentBGClouds, {DISPLAY_SIZE.x/2, 270}, -DEPTH_MAX, duration=INF)
+				bottomClouds := spriteEffect_make(sp.continentBGClouds, {DISPLAY_SIZE.x/2, 270}, layer_depth(.stageFG), duration=INF)
 				entity_persistent_set(bottomClouds.entity, true)
 				dialogue.hd_portraits_prev = DialogueHDPortrait{}
 				dialogue.hd_portraits = DialogueHDPortrait{}
@@ -80,7 +80,7 @@ _cutscenes_reload_trailer :: proc(){
 
 			if seq_cue(t, t+170+30){
 				bottomCloudsH := sp.continentBGClouds.size.y
-				bottomClouds.transform.y = seq_map(bottomCloudsH*3,-bottomCloudsH*1.5, cu.easeInOutStrong) + DEPTH_MAX
+				bottomClouds.transform.y = seq_map(bottomCloudsH*3,-bottomCloudsH*1.5, cu.easeInOutStrong) + layer_depth(.stageBG)
 				if stage.loaded == st.lowerArea{
 					bottomClouds.transform.pos.x = stage.target_camera_pos.x
 					bottomClouds.transform.pos.y += stage.camera_pos.y
@@ -99,7 +99,7 @@ _cutscenes_reload_trailer :: proc(){
 				}
 
 				if roll(1./40.) && seq_time()<t-30{
-					cloud := spriteEffect_make(choose([]^Sprite{sp.cloudA, sp.cloudB, sp.cloudC, sp.smallCloudA, sp.smallCloudB, sp.smallCloudC}), Vec2{random_range(0, DISPLAY_SIZE.x), DISPLAY_SIZE.y+60+DEPTH_MAX}, -DEPTH_MAX, 30, scale={random_range(1., 3.), 1})
+					cloud := spriteEffect_make(choose([]^Sprite{sp.cloudA, sp.cloudB, sp.cloudC, sp.smallCloudA, sp.smallCloudB, sp.smallCloudC}), Vec2{random_range(0, DISPLAY_SIZE.x), DISPLAY_SIZE.y+60+layer_depth(.stageBG)}, layer_depth(.stageFG), 30, scale={random_range(1., 3.), 1})
 					cloud.mover.speed.y = -DISPLAY_SIZE.y/10
 					proc_call_delayed(proc(){audio_play(au.cloudWoosh)}, 5)
 				}
@@ -132,7 +132,7 @@ _cutscenes_reload_trailer :: proc(){
 				stage.backgroundColor = color_lerp(color_hex(0x8ec3b0), color_hex(0x55776e), seq.cue_prog)
 				foliage := coall_true(Foliage)
 				sort(foliage, proc(a,b:^Foliage)->bool{
-					return a.depth.(f32)<b.depth.(f32)
+					return a.depth<b.depth
 				})
 				cols:[3][2]Color={
 					{color_hex(0x28533a), color_hex(0x19342a)},
@@ -142,9 +142,6 @@ _cutscenes_reload_trailer :: proc(){
 				for f,i in foliage{
 					f.leafColor = color_lerp(cols[i][0], cols[i][1], seq.cue_prog)
 					f.branchColor = f.leafColor
-					for &node in f.updateNodes{
-						foliage_node_update_colors(f, &node)
-					}
 				}
 			}
 			if seq_cue(t-22){
@@ -245,7 +242,7 @@ _cutscenes_reload_trailer :: proc(){
 				p := entity_make(Player)
 				p.transform.pos = {605, 336}
 				scface(p.stageCharacter, .up)
-				camera_tracking_set(p.transform)
+				camera_tracking_set(p.stageCharacter._ptr)
 				stage.backgroundColor = color_hex(0x7AC5B0)
 			}
 
@@ -375,7 +372,7 @@ _cutscenes_reload_trailer :: proc(){
 					stage_load(st.upperPlatform)
 					pro := entity_make(Player).stageCharacter
 					transform_set(pro.transform, Vec2{434, 760})
-					camera_tracking_set(pro.transform)
+					camera_tracking_set(pro._ptr)
 					scface(pro, .down)
 					dialogue_open(di.trailer, "exitingTownHall")
 				}, 60, .fade, COLOR_WHITE, true)

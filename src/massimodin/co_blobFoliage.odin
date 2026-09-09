@@ -2,7 +2,6 @@
 package massimodin //@nested-tags:_components/
 
 import "core:mem"
-import "../sdl2"
 import "../imgui"
 
 BLOB_FOLIAGE_TYPE_COUNT :: 13
@@ -63,7 +62,7 @@ _blobFoliage_system_reload :: proc(){
 		{{128,136}, 	6.2,		25, 	5.75,	0.54, 	4,		11,		0.5, -3, -0.75, false,		1.25, 80, 95,  			1}  //giant
 	}
 	
-	leaves := make_soa(#soa[dynamic]BlobFoliageGeneratorLeaf, context.temp_allocator)
+	leaves := make([dynamic]BlobFoliageGeneratorLeaf, context.temp_allocator)
 	poles := make([dynamic]SDFShape, context.temp_allocator)
 	upperPoles := make([dynamic]SDFShape, context.temp_allocator)
 	leafSourceSprite := sp.blobLeaf0
@@ -71,16 +70,17 @@ _blobFoliage_system_reload :: proc(){
 	leafSourcePage := leafSourceSprite.frames[0].texturePage
 	leafSprites := []^Sprite{sp.blobLeaf0, sp.blobLeaf15, sp.blobLeaf30, sp.blobLeaf45, sp.blobLeaf60, sp.blobLeaf75}
 
-	draw_color(COLOR_WHITE)
-	tex_target_set(foliage_system.blobs_texture_page)
 	drawPos:Vec2
 
 	blobFrameDuration := time_convert(BLOB_FOLIAGE_FRAME_INTERVAL, .frames, .milliseconds)
 	for blob, blobInd in blobData{
+		//reset the target and flush rendering per blob to prevent accumulated draw calls from overwhelming vulkan on low-end hardware.
+		tex_target_set(foliage_system.blobs_texture_page, clear=blobInd == 0)
+
 		random_set_seed(blob.seed)
 
 		clear(&poles)
-		clear_soa(&leaves)
+		clear(&leaves)
 
 		resize(&poles, blob.poleCount)
 		resize(&upperPoles, blob.poleCount)
@@ -173,7 +173,7 @@ _blobFoliage_system_reload :: proc(){
 		name, newSprite := strmap_get_ptr(sprites._sprites_map, format("blobFoliage__%i", blobInd))
 		newSprite.name = name
 		newSprite.size = blob.size
-		newSprite.origin = {i32(blob.size.x/2), i32(blob.size.y/2)}
+		newSprite.origin = floor(blob.size/2)
 		newSprite.frames = make([dynamic]SpriteFrame, BLOB_FOLIAGE_FRAME_COUNT_DISPLAYED, assets.allocator)
 		
 		newSprite.pingPong = true
@@ -193,30 +193,29 @@ _blobFoliage_system_reload :: proc(){
 			}
 			renderN := n-simOff
 			if renderN>=0 && renderN%BLOB_FOLIAGE_FRAME_INTERVAL==0{
-				draw_rect(Rect{drawPos, blob.size}, COLOR_WHITE, 1, BlendMode.subtract)
+				blendmode_set(.subtract)
+				draw_rect(Rect{drawPos, blob.size}, COLOR_WHITE, 1)
+				blendmode_set(.blend)
 				for &leaf,i in leaves{
 					x := drawPos.x + f32(leaf.pos.x)
 					y := drawPos.y + f32(leaf.pos.y)
 					frame := leaf.leafFrame
 
-					//convert origin and new sizes to f32 for transformation and adjust for trim
-					size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
-					origin := Vec2{f32(leaf.spriteOrigin.x - frame.trimOffset.x), f32(leaf.spriteOrigin.y - frame.trimOffset.y)}
+					//adjust origin for trim
+					size := frame.texturePagePos.size
+					origin := leaf.spriteOrigin - frame.trimOffset
 
-					dst := sdl2.Rect{
-						i32(round(x - origin.x)),
-						i32(round(y - origin.y)),
-						i32(round(size.x)),
-						i32(round(size.y))
-					}
-
-					pivot := sdl2.Point{i32(round(origin.x)), i32(round(origin.y))}
-					
-					sdl2.RenderCopyEx(display._renderer, leafSourcePage, &frame.texturePagePos, &dst, f64(-leaf.angle)+f64(leaf.angleOffset), &pivot, .NONE)
+					render_quad(leafSourcePage.texture, .nearest, Quad{
+						worldRect = {{round(x - origin.x), round(y - origin.y)}, round(size)},
+						uvRect = spriteFrame_uv(frame, frame.texturePagePos),
+						pivot = {round(origin.x), round(origin.y)},
+						rotation = angle_to_rads(-leaf.angle + f32(leaf.angleOffset)),
+						blend=BLEND_WHITE,
+					})
 				}
 				sdf_draw(poles[:], blob.poleSDFRange, offset=drawPos)
 
-				tpp := sdl2.Rect{i32(drawPos.x), i32(drawPos.y), i32(blob.size.x), i32(blob.size.y)}
+				tpp := Rect{drawPos, blob.size}
 				frameInd := renderN/BLOB_FOLIAGE_FRAME_INTERVAL
 				framePositions[frameInd] = tpp
 				spriteFrame := &newSprite.frames[frameInd]
@@ -224,7 +223,7 @@ _blobFoliage_system_reload :: proc(){
 				spriteFrame.framePosition = framePos
 				spriteFrame.duration = blobFrameDuration
 				framePos += blobFrameDuration
-				spriteFrame.texturePage = foliage_system.blobs_texture_page.ptr
+				spriteFrame.texturePage = &foliage_system.blobs_page
 				
 				drawPos.x += blob.size.x
 				if drawPos.x+blob.size.x>=4096{
@@ -235,6 +234,9 @@ _blobFoliage_system_reload :: proc(){
 		}
 
 		newSprite.totalDuration = framePos
+
+		tex_target_reset()
+		render_flush()
 	}
 
 	
@@ -253,16 +255,16 @@ _blobFoliage_system_reload :: proc(){
 	// 	size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
 	// 	origin := Vec2{f32(leaf.spriteOrigin.x - frame.trimOffset.x), f32(leaf.spriteOrigin.y - frame.trimOffset.y)}
 
-	// 	dst := sdl2.Rect{
+	// 	dst := sdl3.Rect{
 	// 		i32(round(x - origin.x)),
 	// 		i32(round(y - origin.y)),
 	// 		i32(round(size.x)),
 	// 		i32(round(size.y))
 	// 	}
 
-	// 	pivot := sdl2.Point{i32(round(origin.x)), i32(round(origin.y))}
+	// 	pivot := sdl3.Point{i32(round(origin.x)), i32(round(origin.y))}
 		
-	// 	sdl2.RenderCopyEx(display._renderer, leafSourcePage, &frame.texturePagePos, &dst, f64(-leaf.angle)+f64(leaf.angleOffset), &pivot, .NONE)
+	// 	sdl3.RenderCopyEx(display._renderer, leafSourcePage, &frame.texturePagePos, &dst, f64(-leaf.angle)+f64(leaf.angleOffset), &pivot, .NONE)
 
 	// 	draw_line(dp, 100)
 	// }
@@ -272,7 +274,7 @@ _blobFoliage_system_reload :: proc(){
 
 BlobFoliageGeneratorLeaf :: struct{
 	leafFrame:^SpriteFrame,
-	spriteOrigin:sdl2.Point,
+	spriteOrigin:Vec2,
 	angle:f32,
 	windForce:f32,
 	windForceSpeed:f32,
@@ -288,7 +290,7 @@ BlobFoliage :: struct{
 	seed:u64, //@e
 	clusterGens:[dynamic; BLOB_FOLIAGE_MAX_CLUSTERS]BlobFoliageClusterGenerator, //@e
 	clusters:[dynamic; BLOB_FOLIAGE_MAX_CLUSTERS]BlobFoliageCluster,
-	drawBlobs:#soa[dynamic]DrawQuad,
+	drawBlobs:[dynamic]MeshQuad,
 	cull:bool,
 }
 
@@ -344,7 +346,7 @@ blobFoliage_regenerate :: proc(using self:^BlobFoliage){
 	defer random_state_set(prevRandom)
 
 	clear(&clusters)
-	clear_soa(&drawBlobs)
+	clear(&drawBlobs)
 	resize(&clusters, len(clusterGens))
 	layerCount := len(BLOB_FOLIAGE_LAYER_COLORS)
 	layerCounts:[BLOB_FOLIAGE_LAYER_COUNT]u16
@@ -380,7 +382,7 @@ blobFoliage_regenerate :: proc(using self:^BlobFoliage){
 				if area <= 48*40 do ind = random_range(0,5)
 				else do ind = randomSizeInd()
 				indRect := foliage_system.blob_frame_positions[ind][0]
-				indSize := Vec2{f32(indRect.w), f32(indRect.h)}
+				indSize := indRect.size
 				indArea := indSize.x*indSize.y
 				if indArea > area && ind>5 do continue
 
@@ -406,15 +408,7 @@ blobFoliage_regenerate :: proc(using self:^BlobFoliage){
 	//generate draw quads depth-sorted
 	for layerInd in 0..<BLOB_FOLIAGE_LAYER_COUNT{
 		for n in 0..<layerCounts[layerInd]{
-			baseRenderInd := i32(len(drawBlobs)*4)
-			append(&drawBlobs, DrawQuad{indices={
-				baseRenderInd,
-				baseRenderInd+1,
-				baseRenderInd+2,
-				baseRenderInd+2,
-				baseRenderInd+3,
-				baseRenderInd,
-			}})
+			append(&drawBlobs, MeshQuad{})
 		}
 	}
 
@@ -425,7 +419,7 @@ blobFoliage_regenerate :: proc(using self:^BlobFoliage){
 			for n in 0..<blob.layer do qi += layerCounts[n]
 			blob.quadInd = qi
 			col := BLOB_FOLIAGE_LAYER_COLORS[blob.colorInd]
-			drawBlobs[qi].colors = sdl2.Color{col.r,col.g,col.b,255}
+			drawBlobs[qi].blends = color_to_blend(col)
 		}
 	}
 }
@@ -457,6 +451,7 @@ case .init:
 	coadd(&stageEntity)
 	seed = 1
 	estring_set(&stageEntity.group, "blob_foliage")
+	stageEntity.debugVisibleOnly = true
 
 case .loaded:
 	blobFoliage_regenerate(self)
@@ -543,7 +538,6 @@ case .updateEditor:
 
 case .preDraw:
 	cull = !stage_edit.enabled
-	stageEntity.visible = stage_edit.enabled
 	camRect := stage_camera_rect()
 	entityPos := stageEntity_draw_pos(stageEntity)
 
@@ -589,8 +583,8 @@ case .preDraw:
 		for &blob in cluster.blobs{
 			//uvs
 			tpp := foliage_system.blob_frame_positions[blob.blobSpriteInd][blob.frame]
-			p1 := Vec2{f32(tpp.x), f32(tpp.y)}/4096
-			p2 := Vec2{f32(tpp.x+tpp.w), f32(tpp.y+tpp.h)}/4096
+			p1 := tpp.pos/4096
+			p2 := (tpp.pos+tpp.size)/4096
 
 			u := Vec2{p1.x, p2.x}
 			v := Vec2{p1.y, p2.y}
@@ -603,8 +597,8 @@ case .preDraw:
 			}
 
 			//draw pos
-			drawPos := blob.basePos - camRect.pos + entityPos //+ cluster.swayOffset*remap(f32(blob.layer), 0, BLOB_FOLIAGE_LAYER_COUNT-1, 0, 1, cu.easeOut)
-			halfSize := Vec2{f32(tpp.w)/2, f32(tpp.h)/2}
+			drawPos := blob.basePos + entityPos //+ cluster.swayOffset*remap(f32(blob.layer), 0, BLOB_FOLIAGE_LAYER_COUNT-1, 0, 1, cu.easeOut)
+			halfSize := tpp.size/2
 			p1 = drawPos-halfSize
 			p2 = drawPos+halfSize
 			drawBlobs[blob.quadInd].quad = {p1, {p2.x, p1.y}, p2, {p1.x, p2.y}}
@@ -612,47 +606,35 @@ case .preDraw:
 	}
 	depth = stageEntity.depth
 case .draw:
-	blobCount := i32(len(drawBlobs))
+	blobCount := len(drawBlobs)
 	if blobCount == 0 || cull do return
 
-	tex_blendmode_set(foliage_system.blobs_texture_page, .blend)
-
-	sdl2.RenderGeometryRaw( //may need to be replaced with individual rendercopy calls to work with custom shaders
-		display._renderer,  foliage_system.blobs_texture_page,
-		cast([^]f32)&drawBlobs[0].quad, 8,
-		cast([^]sdl2.Color)&drawBlobs[0].colors, 4,
-		cast([^]f32)&drawBlobs[0].uvs, 8,
-		blobCount*4,
-		&drawBlobs[0].indices, blobCount*6, 4
-	)
+	//the whole cluster is one contiguous mesh range, so it stays a single draw
+	render_mesh_quads(foliage_system.blobs_texture_page.ptr, .nearest, drawBlobs[:])
 
 case .drawEditor:
 	if !stageEntity_editing(stageEntity) do return
 
 	entityPos := stageEntity_draw_pos(stageEntity)
-	shader_set(shaders._base_shader)
+	shader_set(Sh_Base)
 	for &cluster in clusterGens{
 		clusterPos := cluster.pos + entityPos
 		hoveringCluster := editorHovering == &cluster
 		hovering := hoveringCluster && editorSelection.kind == .pos
-		draw_color(color_hex(0x8324b4), hovering?178:76)
-		draw_circle(clusterPos, widgetHoverRadCenter/(hovering?1:2))
+		draw_circle(clusterPos, widgetHoverRadCenter/(hovering?1.:2.), color_hex(0x8324b4), hovering?0.7:0.3)
 		
 		draw_rings(clusterPos, {cluster.radii, cluster.radii+2}, {COLOR_WHITE, color_hex(0x1859b4)}, {0, hoveringCluster?0.7:0.3})
 		
 		hovering = hoveringCluster && editorSelection.kind == .radX
-		draw_color(color_hex(0x62beff), hovering?178:76)
-		draw_circle(clusterPos + {cluster.radii.x, 0}, widgetHoverRad/(hovering?1:2))
-		draw_circle(clusterPos - {cluster.radii.x, 0}, widgetHoverRad/(hovering?1:2))
+		draw_circle(clusterPos + {cluster.radii.x, 0}, widgetHoverRad/(hovering?1.:2.), color_hex(0x62beff), hovering?0.7:0.3)
+		draw_circle(clusterPos - {cluster.radii.x, 0}, widgetHoverRad/(hovering?1.:2.), color_hex(0x62beff), hovering?0.7:0.3)
 
 		hovering = hoveringCluster && editorSelection.kind == .radY
-		draw_color(color_hex(0x62beff), hovering?178:76)
-		draw_circle(clusterPos + {0,cluster.radii.y}, widgetHoverRad/(hovering?1:2))
-		draw_circle(clusterPos - {0,cluster.radii.y}, widgetHoverRad/(hovering?1:2))
+		draw_circle(clusterPos + {0,cluster.radii.y}, widgetHoverRad/(hovering?1.:2.), color_hex(0x62beff), hovering?0.7:0.3)
+		draw_circle(clusterPos - {0,cluster.radii.y}, widgetHoverRad/(hovering?1.:2.), color_hex(0x62beff), hovering?0.7:0.3)
 
 		hovering = hoveringCluster && editorSelection.kind == .growPos
-		draw_color(color_hex(0xf6da62), hovering?178:76)
-		draw_circle(clusterPos+cluster.growOffset, widgetHoverRad/(hovering?1:2))
+		draw_circle(clusterPos+cluster.growOffset, widgetHoverRad/(hovering?1.:2.), color_hex(0xf6da62), hovering?0.7:0.3)
 	}
 	shader_reset()
 }}

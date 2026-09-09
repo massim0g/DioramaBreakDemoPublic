@@ -44,7 +44,7 @@ case .update:
 case .draw:
 	prog := age/duration
 	drawAlpha := 1 - prog
-	shader_set(sh.colorOnly) //custom shader for these?
+	shader_set(Sh_ColorOnly) //custom shader for these?
 	sprite_draw_ex(
 		spriter.mySprite, drawPos, spriter.lastFrame, 
 		scale, angle, color_lerp(lerpColors[0], lerpColors[1], prog), drawAlpha*baseAlpha

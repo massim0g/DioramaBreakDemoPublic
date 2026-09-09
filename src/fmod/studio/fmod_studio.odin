@@ -27,6 +27,13 @@ else when #config(ON_SWITCH, false) {
         foreign import lib "lib/nx64/libfmodstudio.a"
     }
 }
+else when ODIN_OS == .Linux {
+    when fmod.LOGGING_ENABLED {
+        foreign import lib "system:fmodstudioL"
+    } else {
+        foreign import lib "system:fmodstudio"
+    }
+}
 
 @(default_calling_convention = "c", link_prefix = "FMOD_Studio_")
 foreign lib {

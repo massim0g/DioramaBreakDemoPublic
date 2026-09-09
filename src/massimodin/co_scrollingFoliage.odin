@@ -1,8 +1,6 @@
 #+feature using-stmt
 package massimodin //@nested-tags:_components/
 
-import "../sdl2"
-
 ScrollingFoliage :: struct{
 	using base:RenderComponentBase,
 	layers:[3][dynamic]ScrollingFoliageInstance,
@@ -30,7 +28,7 @@ case .init:
 
 	scrollSpeed = {0, -2}
 
-	depth = DEPTH_MAX+100
+	depth = layer_depth(.stageBG)+100
 
 	for n in 0..<200{ //populate foliage
 		component_event_process(self, .update)
@@ -76,39 +74,46 @@ case .draw:
 	#reverse for layer,i in layers{
 		scale := 1/pow(FOLIAGE_PARALLAX_EXPONENT_BASE, f32(i))
 		color := leafColors[i]
-		sdl2.SetTextureColorMod(foliage_system.blobs_texture_page, color.r, color.g, color.b)
+		blend := color_to_blend(color)
 		for inst in layer{ //hot!
 			//sprite_draw_ex(inst.sprite, inst.pos, sprite_frame_get(inst.sprite), parallaxScale*inst.flip, color=leafColors[i])
 
-			angle :f64= 0
+			angle :f32= 0
 			flip := inst.flip
 			if (flip.x == 1 && flip.y == 1){
 				angle = -180
 				flip = {0,0}
 			}
-			flipConst := sdl2.RendererFlip(flip.x + flip.y*2)
 
-			frame := inst.sprite.frames[frameIndex]
+			frame := &inst.sprite.frames[frameIndex]
 
-			//convert origin and new sizes to f32 for transformation and adjust for trim
-			size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+			//adjust origin for trim
+			size := frame.texturePagePos.size
 			newSize := size*scale
 			sizeDelta := newSize - size
 
-			origin := Vec2{f32(inst.sprite.origin.x - frame.trimOffset.x), f32(inst.sprite.origin.y - frame.trimOffset.y)}
+			origin := inst.sprite.origin - frame.trimOffset
 			origin.x += (size.x - origin.x*2 - 1)*f32(flip.x)
 			origin.y += (size.y - origin.y*2 - 1)*f32(flip.y)
 
-			destRect := sdl2.Rect{
-				i32(inst.pos.x - origin.x - origin.x/size.x*sizeDelta.x) - camera.pos.x,
-				i32(inst.pos.y - origin.y - origin.y/size.y*sizeDelta.y) - camera.pos.y,
-				i32(newSize.x),
-				i32(newSize.y)
-			}
+			flags:QuadFlags
+			if flip.x == 1 do flags += {.flipX}
+			if flip.y == 1 do flags += {.flipY}
 
-			pivot := sdl2.Point{i32(origin.x*scale), i32(origin.y*scale)}
-			
-			sdl2.RenderCopyEx(display._renderer, frame.texturePage, &frame.texturePagePos, &destRect, angle, &pivot, flipConst)
+			render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+				worldRect = {
+					{
+						f32(i32(inst.pos.x - origin.x - origin.x/size.x*sizeDelta.x)),
+						f32(i32(inst.pos.y - origin.y - origin.y/size.y*sizeDelta.y)),
+					},
+					{f32(i32(newSize.x)), f32(i32(newSize.y))},
+				},
+				uvRect = spriteFrame_uv(frame, frame.texturePagePos),
+				pivot = {f32(i32(origin.x*scale)), f32(i32(origin.y*scale))},
+				rotation = angle_to_rads(angle),
+				blend = blend,
+				flags = flags,
+			})
 		}
 	}
 

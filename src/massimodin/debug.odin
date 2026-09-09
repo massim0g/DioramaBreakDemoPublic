@@ -1,20 +1,19 @@
 package massimodin //@nested-tags:debug
 
+import "core:strings"
 import time_ "core:time"
 import "core:path/filepath"
 import "core:os"
-import "../sdl2"
-import "../tinyfd"
+import "../sdl3"
 import "core:fmt"
 import "base:runtime"
-import "base:intrinsics"
 import stacktrace "core:debug/trace"
 import "core:sys/posix"
-import win32 "core:sys/windows"
 
 DebugSystem :: struct{
 	showInfo:bool,
 	freeCamSpeed:f32,
+	onScreenStageEntities:int,
 	capture_enabled:bool,
 	capture_pipe:^posix.FILE,
 	capture_frame_size:[2]i32,
@@ -34,7 +33,7 @@ STACKTRACE_ENABLED :: DEBUG && !ODIN_DISABLE_ASSERT && !#config(TRACY_ENABLE, fa
 print :: proc(args:..any, sep := " ", flush := true) -> int{
 	when ON_SWITCH{
 		str := fmt.ctprint(..args, sep=sep)
-		sdl2.Log(str)
+		sdl3.Log(str)
 		return len_cstring(str)
 	}
 	else{
@@ -44,7 +43,7 @@ print :: proc(args:..any, sep := " ", flush := true) -> int{
 printf :: proc(format:string, args:..any, flush := true) -> int{
 	when ON_SWITCH{
 		str := fmt.ctprintf(format, ..args)
-		sdl2.Log(str)
+		sdl3.Log(str)
 		return len_cstring(str)
 	}
 	else{
@@ -69,19 +68,41 @@ _debug_system_update :: proc(){
 
 _debug_info_draw :: proc(){
 	fonts.default = fo.fairfax__24
-	if(time.lastFrameDuration > 0){
-		text_draw(
-			format("FPS: %.2f (%.2fms)", 1/time.lastFrameDuration*1000, time.lastFrameDuration),
-			10, 10, COLOR_YELLOW, 1
-		)
+
+	lastFrameDuration:f32 = 0
+	lastFrameDurationWithVsync:f32 = 0
+	for fm in time.frame_marks_last_frame{
+		lastFrameDurationWithVsync += fm.t
+		if fm.name != "Vsync" do lastFrameDuration += fm.t
+	}
+
+	ui_begin("debugInfo", {10, 10})
+	ui.disabled = true
+
+	if lastFrameDuration > 0{
+		ui_text(format("FPS (uncapped): %.2f (%.2fms)", 1/lastFrameDuration*1000, lastFrameDuration), COLOR_YELLOW, dropShadow=COLOR_BLACK)
+		sb := strings.builder_make(context.temp_allocator)
+		strings.write_string(&sb, "Frame duration: ")
+		for fm in time.frame_marks_last_frame{
+			fmt.sbprintf(&sb, "%s - %.2fms, ", fm.name, fm.t)
+		}
+		fmt.sbprintf(&sb, "Total (including Vsync) - %.2fms", lastFrameDuration)
+		ui_text(strings.to_string(sb), COLOR_YELLOW, dropShadow=COLOR_BLACK)
 	}
 
 	defaultArena := cast(^Arena)default_allocator.data
-	text_draw(
-		format("Default allocator usage: %iMB", defaultArena.total_used/1_000_000),
-		10, 12+text_char_height(), COLOR_YELLOW, 1
-	)
-	
+	ui_text(format("Default allocator usage: %iMB", defaultArena.total_used/1_000_000), COLOR_YELLOW, dropShadow=COLOR_BLACK)
+
+	ui_text(format("StageEntity count: %i (Total), %i (On-screen)", len(coall(StageEntity)), debug.onScreenStageEntities), COLOR_YELLOW, dropShadow=COLOR_BLACK)
+
+	totalParticles := 0
+	for _,g in particles._groups do totalParticles += len(g.particles)
+	ui_text(format("Particle count: %i", totalParticles), COLOR_YELLOW, dropShadow=COLOR_BLACK)
+
+	ui_text(format("Render stats: %i entries, %i draws, %i passes", render.stats_last.entries, render.stats_last.draws, render.stats_last.passes), COLOR_YELLOW, dropShadow=COLOR_BLACK)
+
+	ui.disabled = false
+	ui_end()
 }
 
 debug_stacktrace_print :: proc(){
@@ -104,6 +125,7 @@ debug_free_cam_enabled :: #force_inline proc "contextless"()->bool{
 	return DEBUG && debug.freeCamSpeed != 0
 }
 
+@(disabled=!ON_WINDOWS) //could maybe work on linux, but need to decide on a standard non-project save directory
 _debug_capture_update :: proc(){
 	bpp :: 4
 	if key_pressed(.F9){
@@ -175,14 +197,14 @@ _debug_capture_update :: proc(){
 
 	if debug.capture_enabled{
 		buffer := make([]u8, debug.capture_frame_size.x*debug.capture_frame_size.y*bpp, context.temp_allocator)
-		if display.hd_enabled{ //4k GPU->CPU readback is bottlenecked by PCIe bandwidth, render down to HD to mitigate this
-			target := tex_target_get()
-			tex_target_set(debug.capture_hd_tex)
-				sdl2.RenderCopy(display._renderer, target, nil, nil)
-				sdl2.RenderReadPixels(display._renderer, nil, u32(sdl2.PixelFormatEnum.ABGR8888), &buffer[0], debug.capture_frame_size.x*bpp)
-			tex_target_reset()
-		}
-		else do sdl2.RenderReadPixels(display._renderer, nil, u32(sdl2.PixelFormatEnum.ABGR8888), &buffer[0], debug.capture_frame_size.x*bpp)
+
+		/*
+		!TODO (R4): reinstate the readback on DownloadFromGPUTexture + a fence wait.
+		It can't simply be translated in place: this runs during the update phase, but draws are only
+		recorded and submitted at present time, so a readback here would capture the previous frame.
+		The fix is to hook it into _render_frame_record, after the plan is recorded and before the submit.
+		*/
+		for &b in buffer do b = 0
 
 		posix.fwrite(&buffer[0], 1, uint(len(buffer)), debug.capture_pipe)
 	}

@@ -83,7 +83,6 @@ _dialogue_system_init :: proc(){
 	init(&dialogue.commands, dialogue.load_allocator)
 
 	dialogue.hd_portraits_tex = tex_make(DISPLAY_SIZE_HD, true)
-	tex_blendmode_set(dialogue.hd_portraits_tex, .premul)
 
 	init(&dialogue.log, 0, DIALOGUE_LOG_CAP+1)
 
@@ -1151,10 +1150,11 @@ dialogue_hd_box_draw :: proc(rect:Rect, alpha:f32=1){
 		if rect.size.y > sp.matteCardstockLight.size.y do scale.y = rect.size.y/sp.matteCardstockLight.size.y
 		sprite_draw_ex(sp.matteCardstockLight, 0,0,scale=scale)
 
-		tex_blendmode_set(maskTex, .subtractInverse)
+		blendmode_set(.subtractInverse)
 		tex_draw(maskTex, 0, 0)
-		tex_blendmode_set(gradientTex, .multiply)
+		blendmode_set(.multiply)
 		tex_draw(gradientTex, 0, 0)
+		blendmode_set(.blend)
 	tex_target_set(finalTex) //reused for final render
 		finalDrawPos := rect.pos-{shadowPad, shadowPad/2}
 		tex_draw(display_main_tex(), -finalDrawPos) //for alpha blend
@@ -1286,11 +1286,16 @@ _dialogue_system_update :: proc(){
 	skipping := settings.dialogue_skip_enabled && ((key_mods_held({.CTRL}) && key_held(.RETURN)) || (ginputs[.ltHeld] && ginputs[.rtHeld]))
 
 	choiceIsInterjection := dialogue.choices_interjection_block_end != 0
+	lineLength := len(dialogue.display_runes)
+	textCrawlDone := dialogue.typewriter_count >= lineLength
 
 	if choiceIsInterjection && !dialogue.choices_show_interjection{
 		checkRect := dialogue.interjection_sprite_draw_rect
 		rect_resize_in_place(&checkRect, checkRect.size.x, checkRect.size.y)
-		if !dialogue.log_open && (ginputs[.extra] || (rect_contains(checkRect, mouse_display_pos()) && ginputs[.confirm])){
+		if !dialogue.log_open && 
+			textCrawlDone &&
+			(ginputs[.extra] || (rect_contains(checkRect, mouse_display_pos()) && ginputs[.confirm]))
+		{
 			dialogue.choices_show_interjection = true
 			ui_cue("dialogueChoiceInterjection")
 			return
@@ -1309,7 +1314,7 @@ _dialogue_system_update :: proc(){
 		return
 	}
 
-	lineLength := len(dialogue.display_runes)
+	
 	playDialogueSound :: proc(){
 		if ui_cue_time("dialogueSound") >= 4{
 			audio_play(display.hd_enabled ? au.hdSpeech : au.chipSpeech)
@@ -1317,7 +1322,7 @@ _dialogue_system_update :: proc(){
 		}
 	}
 
-	if(dialogue.typewriter_count < lineLength){
+	if !textCrawlDone{
 		if(
 			!dialogue.auto_advance &&
 			(skipping || 
@@ -1428,13 +1433,14 @@ _dialogue_system_draw :: proc(){
 		drawHDPortrait :: proc(portrait:DialogueHDPortrait, drawPos:Vec2, headOffset:Vec2, color:Color, alpha:f32){
 			//trace("HD Portrait")
 			drawTex := tex_make(portrait.body.size, true)
-			tex_blendmode_set(drawTex, .accumulate)
 			defer tex_destroy(drawTex)
 			tex_target_set(drawTex)
 				sprite_draw(portrait.body, 0,0)
 				sprite_draw(portrait.head, headOffset)
 			tex_target_reset()
+			blendmode_set(.accumulate)
 			tex_draw_ex(drawTex, drawPos, color=color, alpha=alpha)
+			blendmode_set(.blend)
 		}
 
 		tex_target_set(dialogue.hd_portraits_tex, clear=false)
@@ -1454,7 +1460,9 @@ _dialogue_system_draw :: proc(){
 		}
 		tex_target_reset()
 
+		blendmode_set(.premul)
 		tex_draw(dialogue.hd_portraits_tex, 0, 0)
+		blendmode_set(.blend)
 
 		if dialogue.hd_overlay_enabled{ //do not use dialogue box when overlaying
 			drawGradient := (dialogue.text_rect == Rect{}) && !dialogue.hd_overlay_fade_interrupt_disable_flag
@@ -1545,7 +1553,7 @@ _dialogue_system_draw :: proc(){
 			drawPos := Vec2{rect_get_right(boxRect)-padding.x+4, boxRect.y+padding.y+1}
 			t := ui_cue_time("dialogueChoiceInterjection")
 			if t == 0{
-				particles_emit(dialogue.interjection_particle, 8, -INF, Rect{drawPos, 0})
+				particles_emit(dialogue.interjection_particle, 8, layer_depth(.uiTop), Rect{drawPos, 0})
 				audio_play(au.interjectionAppears)
 			}
 			interjectionSpr := display.hd_enabled ? sp.shineAnimatedHD : sp.shineAnimated24px
@@ -1619,7 +1627,7 @@ _dialogue_system_draw :: proc(){
 		fadeDur :: 10
 		logAlpha :f32= dialogue.log_open ? ui_cue_map("dialogueLogFade", 0, fadeDur, 0, 1) : ui_cue_map("dialogueLogFade", 0, fadeDur, 1, 0)
 		if logAlpha > 0{
-			draw_rect(Rect{0, display_size()}, COLOR_BLACK, alpha=logAlpha*0.7)
+			draw_rect_fullscreen(COLOR_BLACK, logAlpha*0.7)
 
 			logPadding :Vec2= {15,12}
 			startY :=  196 - text_char_height(dialogue.font_default)*2

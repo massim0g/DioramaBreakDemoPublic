@@ -19,18 +19,20 @@ timestop_start_seq :: proc()->bool{
 		if seq_cue(0, duration){
 			if seq_time() != 0 do combat.time_stop_saturation = seq_map(0.66, 0.33)
 			seq_draw(proc(){
-				if seq_cue(1){
+				if seq_cue(0){
 					tex_target_set(combat.time_stop_transition_bg)
-					tex_draw(display_main_tex(), 0,0)
+					display_main_tex_draw()
 					tex_target_reset()
 				}
-				tex_ghosts_draw(display_main_tex_inactive(), 4, 5, -1, 1/0.9, cu.easeInStrong, seq_time()-1, duration)
+				tex_ghosts_draw(display_snapshot(), 4, 5, -1, 1/0.9, cu.easeInStrong, seq_time(), duration)
 				ringStart :: 3
-				if seq_cue(ringStart+1, duration/2+ringStart){
+				if seq_cue(ringStart, duration/2+ringStart){
 					r := seq_map(0,DISPLAY_RADIUS, cu.easeInStrong)
 					tex_target_set(combat.time_stop_transition_maskA)
 					tex_draw(combat.time_stop_transition_bg, 0,0)
-					sprite_draw_ex(sp.circle256, DISPLAY_SIZE/2, scale=r*2/256, blendmode=BlendMode.subtract)
+					blendmode_set(.subtract)
+					sprite_draw_ex(sp.circle256, DISPLAY_SIZE/2, scale=r*2/256)
+					blendmode_set(.blend)
 					tex_target_reset()
 					tex_draw(combat.time_stop_transition_maskA,0,0)
 					// fuzzy_circle_draw(Circle{DISPLAY_SIZE/2, r}, 0.8, 1, 18)
@@ -44,16 +46,16 @@ timestop_start_seq :: proc()->bool{
 							3, 10, cu.easeOut_inv,
 							0, true,
 							alphaCurve=cu.easeOutStrong_inv, angleMatchesDir=true
-						), random_range(24, 32), -INF, Circle{DISPLAY_SIZE/2, r+48}, 4, false)
+						), random_range(24, 32), layer_depth(.ui), Circle{DISPLAY_SIZE/2, r+48}, 4, false)
 					}
 
 				}
-				if seq_cue(1){
-					draw_rect(Rect{0, DISPLAY_SIZE}, COLOR_WHITE)
+				if seq_cue(0){
+					draw_rect_fullscreen(COLOR_WHITE)
 					sprite_draw_ex(sp.shineSilhouette, DISPLAY_SIZE/2, color=COLOR_BLACK)
 				}
 
-			}, -DEPTH_MAX*1000, false)
+			}, layer_depth(.stageTop) - 1, false) //in front of all stage content, behind the UI layers
 		}
 		if seq_cue(24) do ui_cue("timeStopped")
 		if seq_cue(duration+1){
@@ -76,22 +78,26 @@ timestop_end_seq :: proc()->bool{
 		}
 		if seq_cue(0, duration){
 			seq_draw(proc(){
-				if seq_cue(1){
+				if seq_cue(0){
 					tex_target_set(combat.time_stop_transition_bg)
-					tex_draw(display_main_tex(), 0,0)
+					display_main_tex_draw()
 					tex_target_reset()
 					combat.time_stop_saturation = 1
 					combat.time_stop_mode = .disabled
 				}
-				if seq_cue(1, duration){
+				if seq_cue(0, duration){
 					r := seq_map(DISPLAY_RADIUS, 0, cu.easeOutStrong)
 					tex_target_set(combat.time_stop_transition_maskB, clear=false)
 					draw_clear()
-					sprite_draw_ex(sp.circle256, DISPLAY_SIZE/2, scale=r*2/256, blendmode=BlendMode.subtract)
+					blendmode_set(.subtract)
+					sprite_draw_ex(sp.circle256, DISPLAY_SIZE/2, scale=r*2/256)
+					blendmode_set(.blend)
 					tex_target_set(combat.time_stop_transition_maskA)
 					tex_draw(combat.time_stop_transition_bg, 0,0)
-					tex_ghosts_draw(combat.time_stop_transition_bg, 4, 5, -1, 0.9, cu.easeOutStrong, seq_time()-1, duration)
+					tex_ghosts_draw(combat.time_stop_transition_bg, 4, 5, -1, 0.9, cu.easeOutStrong, seq_time(), duration)
+					blendmode_set(.subtract)
 					tex_draw(combat.time_stop_transition_maskB, 0, 0)
+					blendmode_set(.blend)
 					tex_target_reset(2)
 					tex_draw(combat.time_stop_transition_maskA,0,0)
 					// fuzzy_circle_draw(Circle{DISPLAY_SIZE/2, r}, 0.8, 1, 16)

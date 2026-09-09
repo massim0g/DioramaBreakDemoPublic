@@ -221,10 +221,9 @@ Maintenant viens, monte sur l'autel.
 
 `c, proAndMayorGetIntoPosition, false``a,5.66`
 
-`a`![[dendro.png]]Phyllo, les notes.
+`a,0.7`![[dendro.png]]Phyllo, les notes.
 
-![[phyllo.png]]
-Oui, M. le Maire.
+`a`![[phyllo.png]]Oui, Monsieur.
 
 `c, phylloHandsOverScript`
 

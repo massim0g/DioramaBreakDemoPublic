@@ -1,10 +1,10 @@
 package massimodin //@nested-tags:engine/visuals
 
-import gl "vendor:OpenGL"
+import "../sdl3"
 
 PalSwapData :: struct{
 	size:Vec2i,
-	colors:[dynamic][3]f32
+	bufferOffset:i32 //element offset of this palette's colors in render._palette_buffer
 }
 
 PalSwapBlendmode :: enum i32{
@@ -14,7 +14,11 @@ PalSwapBlendmode :: enum i32{
 }
 
 
-pal_swap_set_swap_data:: proc(swapData:PalSwapData, index:f32, alwaysApplyWithShortestDistance:=false, blendmode:=PalSwapBlendmode.replace){
+pal_swap_set :: proc(paletteSprite:^Sprite, index:f32, alwaysApplyWithShortestDistance:=false, blendmode:=PalSwapBlendmode.replace){
+
+	swapData, ok := render._pal_swap_sprite_map[paletteSprite]
+
+	assertf(ok, "Could not retrieve palette swap data for palette sprite '%s'!", paletteSprite.name)
 
 	indexIntf, indexFrac := split(index)
 	index1 := int(indexIntf) % swapData.size.x
@@ -22,41 +26,22 @@ pal_swap_set_swap_data:: proc(swapData:PalSwapData, index:f32, alwaysApplyWithSh
 	index1 *= swapData.size.y
 	index2 *= swapData.size.y
 
-	shader_set(sh.palSwap)
-	
-	palSize := i32(swapData.size.y)
-	shader_uniform_set(sh.palSwap, "paletteSize", palSize)
-	gl.Uniform3fv(shader_uniform_loc(sh.palSwap, "sourceColors"), palSize, &swapData.colors[0][0])
-	gl.Uniform3fv(shader_uniform_loc(sh.palSwap, "destColors1"), palSize, &swapData.colors[index1][0])
-	gl.Uniform3fv(shader_uniform_loc(sh.palSwap, "destColors2"), palSize, &swapData.colors[index2][0])
-	shader_uniform_set(sh.palSwap, "alwaysApplyWithShortestDistance", alwaysApplyWithShortestDistance)
-	shader_uniform_set(sh.palSwap, "blendmode", i32(blendmode))
-	shader_uniform_set(sh.palSwap, "destMix", indexFrac)
-
-	//print(swapData, index)
-
+	//the colors live preloaded in render._palette_buffer; source colours are the palette sprite's first column, the two dest columns are picked by the index
+	shader_set(Sh_PalSwap{
+		paletteSize = i32(swapData.size.y),
+		destMix = indexFrac,
+		alwaysApplyWithShortestDistance = i32(alwaysApplyWithShortestDistance),
+		blendmode = i32(blendmode),
+		sourceOff = swapData.bufferOffset,
+		dest1Off = swapData.bufferOffset + i32(index1),
+		dest2Off = swapData.bufferOffset + i32(index2),
+	})
+	shader_buffer_bind("palettes", &render._palettes_buffer)
 }
-pal_swap_set_sprite :: proc(paletteSprite:^Sprite, index:f32, alwaysApplyWithShortestDistance:=false, blendmode:=PalSwapBlendmode.replace){
-
-	swapData, ok := shaders._pal_swap_sprite_map[paletteSprite]
-
-	assertf(ok, "Could not retrieve palette swap data for palette sprite '%s'!", paletteSprite.name)
-
-	pal_swap_set_swap_data(swapData, index, alwaysApplyWithShortestDistance, blendmode)
-}
-
-
-
-// pal_swap_set_tex :: proc(palette:Tex, index:f32){
-// 	//convert tex to palswapdata 
-// }
-
-pal_swap_set :: proc{pal_swap_set_swap_data, pal_swap_set_sprite}
 
 
 add_fade_set :: proc(amount:f32){
-	shader_set(sh.addFade)
-	shader_uniform_set(sh.addFade, "add", amount)
+	shader_set(Sh_AddFade{add = amount})
 }
 
 tex_ghosts_draw :: proc(drawTex:Tex, ghostCount:int, interval:int, endRot:f32, endScale:f32, scaleCurve:^Curve=nil, t:=time.frame, endFrame:=INT_MAX){
@@ -94,8 +79,7 @@ tex_ghosts_draw :: proc(drawTex:Tex, ghostCount:int, interval:int, endRot:f32, e
 	}
 }
 
-fuzzy_circle_draw :: proc(c:Circle, density:f32, thickMin:f32, thickMax:f32, color:=COLOR_WHITE, alpha:=1){
-	draw_color(color, u8(alpha*255))
+fuzzy_circle_draw :: proc(c:Circle, density:f32, thickMin:f32, thickMax:f32, color:=COLOR_WHITE, alpha:f32=1){
 	circ := circumference(c)
 	lineCount := roundi(circ*density)
 	for n in 0..<lineCount{
@@ -103,6 +87,6 @@ fuzzy_circle_draw :: proc(c:Circle, density:f32, thickMin:f32, thickMax:f32, col
 		dir := vec2_random()
 		p1 := c.pos+dir*(c.radius-length/2)
 		p2 := c.pos+dir*(c.radius+length/2)
-		draw_line(p1, p2)
+		draw_line(p1, p2, color=color, alpha=alpha)
 	}
 }

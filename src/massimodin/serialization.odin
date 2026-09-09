@@ -36,8 +36,8 @@ json_unmarshal_uip :: proc(type:^reflect.Type_Info, val:json.Value, valPtr:uintp
 			if !found do (cast(^LocaleID)valPtr)^ = 0
 			else do (cast(^LocaleID)valPtr)^ = LocaleID(id)
 			return
-		case Shader:
-			(cast(^Shader)valPtr)^ = shader_find(val.(json.String))
+		case ^Shader:
+			(cast(^^Shader)valPtr)^ = shader_find(val.(json.String))
 			return
 		case Estring:
 			es := cast(^Estring)valPtr
@@ -342,8 +342,9 @@ json_marshal_to_writer :: proc(w: io.Writer, v: any, opt: ^json.Marshal_Options=
 		case LocaleID:
 			err = json_marshal_to_writer(w, dialogue.locales_loaded[v.(LocaleID)], opt)
 			return
-		case Shader:
-			err = json_marshal_to_writer(w, shader_name(v.(Shader)), opt)
+		case ^Shader:
+			shader := v.(^Shader)
+			err = json_marshal_to_writer(w, shader != nil ? shader.name : "", opt)
 			return
 		case Estring:
 			err = json_marshal_to_writer(w, v.(Estring).s, opt)

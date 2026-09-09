@@ -45,7 +45,7 @@ case .update:
 			minScale=0.4, maxScale=0.5, scaleCurves=cu.easeOut_inv,
 			colors=COLOR_BLACK,
 			angleSpread=0, dir=90, dirSpread=10, 
-		), 20, depth.(f32), sprite_draw_rect(sprite, transform.pos, len(sprite.frames)-1, transform.scale))
+		), 20, depth, sprite_draw_rect(sprite, transform.pos, len(sprite.frames)-1, transform.scale))
 	}
 	if seq_cue(t+40) do entity_destroy(self)
 	seq_close(.pause)
@@ -58,7 +58,7 @@ case .draw:
 
 	tex_target_set(drawTex, texPos)
 		baseCol := seq_time() >= fadeDarkDur+dissolveDur ? COLOR_WHITE:COLOR_BLACK
-		shader_set(sh.colorOnly)
+		shader_set(Sh_ColorOnly)
 		sprite_draw_ex(sprite, transform.pos, drawFrame, transform.scale, color=baseCol)
 		shader_reset()
 		dr := sprite_draw_rect(sprite, transform.pos, drawFrame, transform.scale)

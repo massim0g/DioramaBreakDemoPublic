@@ -181,6 +181,14 @@ audio_banks_build :: proc(audioDir:string, bankGuids:[]string){
 	//Wait so banks are present before the build is reported complete.
 	state, _ := os.process_wait(handle)
 	if state.exit_code != 0 do printf("ERROR: FMOD bank build failed (exit %d)", state.exit_code)
+
+	//move files from fmod-controlled output dir to actual build dir
+	audioOut,_ := filepath.join({paths.build, "audio/_win64"}, context.temp_allocator)
+	bankFiles,_ := os.read_all_directory_by_path(audioOut, context.temp_allocator)
+	for file in bankFiles{
+		newPath,_ := filepath.join({paths.build_win64, file.name}, context.temp_allocator)
+		os.rename(file.fullpath, newPath)
+	}
 }
 
 audio_event_cache_path :: proc() -> string{

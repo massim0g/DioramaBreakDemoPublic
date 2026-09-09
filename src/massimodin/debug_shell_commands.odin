@@ -329,19 +329,6 @@ _shell_commands_reload :: proc(){
 			}
 		},
 
-		"display_performance_mode" = {
-			"Sets the display performance mode",
-			{{"mode", reflect.enum_field_names(DisplayPerformanceMode), ""}},
-			proc(params:..string){
-				mode,ok := reflect.enum_from_name(DisplayPerformanceMode, params[0])
-				if !ok{
-					_shell_print("Unknown performance mode '%s'!", params[0])
-					return
-				}
-				display_performance_mode_set(mode)
-			}
-		},
-
 		"test" ={
 			"Calls a preset custom proc, for testing.",
 			{},

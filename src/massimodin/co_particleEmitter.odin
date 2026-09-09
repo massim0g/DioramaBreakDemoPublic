@@ -38,7 +38,7 @@ using self
 case .init:
 	
 case .update:
-	if combat.time_stop_mode != .disabled && particleDepth != -INF do return 
+	if combat.time_stop_mode != .disabled && particleDepth > layer_depth(.ui) do return
 	region_ := region
 	if relativeToCamera do region_.pos += stage.camera_pos
 	emitCharge += count

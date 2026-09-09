@@ -1,9 +1,7 @@
 package massimodin //@nested-tags:engine/camera
 
 CameraSystem :: struct{
-	stack:[dynamic]Vec2,
-	pos:[2]i32,
-	tracking:[dynamic]CoRefEx(Transform),
+	tracking:[dynamic]CameraTrackingTarget,
 	tracking_offset:Vec2,
 	default_pan_cutscene_target:CameraPanTarget,
 	default_pan_cutscene_duration:int,
@@ -25,54 +23,64 @@ CameraPanTarget :: union{
 	[]^Transform
 }
 
+CameraTrackingTarget :: union{
+	Vec2,
+	CoRefEx(Transform),
+	CoRefEx(Mover)
+}
+
 CAMERA_DEFAULT_TRACKING_OFFSET :: Vec2{0, -36}
 CAMERA_SHAKE_MAX :f32: 12
 
 _camera_system_init :: proc(){
 	camera = new(CameraSystem)
-	init(&camera.stack)
 	init(&camera.shakeRequests)
 }
 
+//camera settings do not interact with depth-sorted render, they will carry through render_depth calls
 camera_set :: proc(pos:Vec2){
-	append(&camera.stack, pos)
-	camera.pos = {i32(round(pos.x)), i32(round(pos.y))}
+	append(&render._entries, RenderEntryCameraSet{round(pos)})
 }
 
-camera_tracking_set :: proc(tracking:..^Transform, offset:=CAMERA_DEFAULT_TRACKING_OFFSET){
-	resize(&camera.tracking, len(tracking))
-	for tr,i in tracking{
-		camera.tracking[i] = crx(tr)
+camera_tracking_set :: proc(tracking:..CameraPanTarget, offset:=CAMERA_DEFAULT_TRACKING_OFFSET){
+	clear(&camera.tracking)
+	reserve(&camera.tracking, len(tracking))
+	for target,i in tracking{
+		switch tr in target{
+			case Vec2:  append(&camera.tracking, tr)
+			case ^Transform: append(&camera.tracking, crx(tr))
+			case ^StageCharacter: append(&camera.tracking, crx(tr.mover))
+			case ^StageEntity: append(&camera.tracking, crx(tr.transform))
+			case string:
+				sc := scfind(tr, true)
+				if sc == nil{
+					targetEnt := stageEntity_find(tr)
+					assertf(targetEnt != nil, "Could not find stage character or entity with id '%s' for camera tracking set!", tr)
+					append(&camera.tracking, crx(targetEnt.transform))
+				}
+				else do append(&camera.tracking, crx(sc.mover))
+			case []^Transform: for transform in tr do append(&camera.tracking, crx(transform))
+		}
+		
 	}
 	camera.tracking_offset = offset
 }
 
-//Gets the camera position as a Vec2 for setter functions, rather than the [2]i32 used for drawing
-camera_pos :: #force_inline proc "contextless" () -> Vec2{
-	return (len(camera.stack) > 0) ? peek(camera.stack) : Vec2(camera.pos)
+camera_tracking_target_get_pos :: proc(tracking:CameraTrackingTarget) -> (pos:Vec2, found:bool){
+	switch tr in tracking{
+		case Vec2: return tr, true
+		case CoRefEx(Transform): if t := coget(tr); t != nil do return t.pos + {0,t.z}, true
+		case CoRefEx(Mover): if m := coget(tr); m != nil do return m.transform.pos + {0,m.transform.z} + m.fractionalSpeed.xy + {0, m.fractionalSpeed.z}, true
+	}
+	return 0, false
 }
 
 camera_reset :: proc(resetCount:=1){
-	assert(len(camera.stack)>=resetCount, "Tried to reset camera with no camera set!")
-	for i in 0..<resetCount{
-		pop(&camera.stack)
-	}
-	
-	if(len(camera.stack) > 0){
-		lastPos := peek(camera.stack)
-		camera.pos = {i32(round(lastPos.x)), i32(round(lastPos.y))}
-	}
-	else do camera.pos = {0,0}
+	append(&render._entries, RenderEntryCameraPop{resetCount})
 }
 
 camera_clear :: proc(){
-	clear(&camera.stack)
-	camera.pos = {0,0}
-}
-
-camera_rect :: proc() -> Rect{
-	if len(camera.stack) == 0 do return Rect{0, display_size()}
-	return Rect{peek(camera.stack), display_size()}
+	append(&render._entries, RenderEntryCameraClear{})
 }
 
 camera_shake :: proc(duration:int, force:Vec2){
@@ -84,30 +92,32 @@ camera_shake :: proc(duration:int, force:Vec2){
 
 
 //Pans the camera to a Vec2 position or a transform (or stage character's transform).
-//If panning to a transform, will pan to that transform's position + the default tracking offset, and set it as the new tracking target.
+//If panning to a transform or character, will pan to that transform's position + the default tracking offset, and set it as the new tracking target.
 //If panning to a Vec2 position, disables tracking.
 camera_pan_to_seq :: proc(target:CameraPanTarget, panDuration:int=48, curve:=cu.smooth, key:ImKey=#caller_location) -> bool{
 	targetPos:Vec2
-	tracking:[]^Transform
+	tracking:CameraPanTarget
 	
 	switch t in target{
 		case Vec2: targetPos = t
 		case ^Transform:
 			targetPos = t.pos + CAMERA_DEFAULT_TRACKING_OFFSET
-			tracking = {t}
+			tracking = t
 		case ^StageCharacter:
 			targetPos = t.transform.pos + CAMERA_DEFAULT_TRACKING_OFFSET
-			tracking = {t.transform}
+			tracking = t
 		case ^StageEntity: targetPos = rect_center(stageEntity_draw_rect(t))
 		case string:
-			targetEnt := stageEntity_find(t)
-			if targetEnt == nil{
-				sc := scfind(t, true)
-				assertf(sc != nil, "Could not find stage character or entity with id '%s' for camera pan!", t)
-				targetPos = sc.transform.pos + CAMERA_DEFAULT_TRACKING_OFFSET
-				tracking = {sc.transform}
+			sc := scfind(t, true)
+			if sc == nil{
+				targetEnt := stageEntity_find(t)
+				assertf(targetEnt != nil, "Could not find stage character or entity with id '%s' for camera pan!", t)
+				targetPos = rect_center(stageEntity_draw_rect(targetEnt))
 			}
-			else do targetPos = rect_center(stageEntity_draw_rect(targetEnt))
+			else{
+				targetPos = sc.transform.pos + CAMERA_DEFAULT_TRACKING_OFFSET
+				tracking = sc
+			}
 		case []^Transform:
 			total:Vec2
 			for tr in t{
@@ -131,7 +141,7 @@ camera_pan_to_seq :: proc(target:CameraPanTarget, panDuration:int=48, curve:=cu.
 		}
 
 		if seq_cue(panDuration){
-			if tracking != nil do camera_tracking_set(tracking=tracking)
+			if tracking != nil do camera_tracking_set(tracking)
 			return seq_close(.end)
 		}
 
@@ -145,7 +155,7 @@ cammove :: camera_pan_to_seq
 camera_pan_to_and_back_seq :: proc(targetPos:Vec2, startDuration:int, holdDuration:int, endDuration:int, startCurve:=cu.easeInHeavy, endCurve:=cu.easeIn, key:ImKey=#caller_location) -> bool{
 	state:^struct{
 		startPos:Vec2,
-		lastTracking:CoRefEx(Transform)
+		lastTracking:CameraTrackingTarget
 	}
 
 	if seq_open(&state, key){
@@ -165,7 +175,7 @@ camera_pan_to_and_back_seq :: proc(targetPos:Vec2, startDuration:int, holdDurati
 
 		if seq_cue(t, t+endDuration){
 			returnPos := state.startPos
-			if tracking := coget(state.lastTracking); tracking != nil do returnPos = tracking.pos + {0,tracking.z} + camera.tracking_offset
+			if trackingPos,ok := camera_tracking_target_get_pos(state.lastTracking);ok do returnPos = trackingPos + camera.tracking_offset
 			stage.target_camera_pos = seq_map(targetPos, returnPos, endCurve)
 		}
 		t+=endDuration
@@ -182,15 +192,17 @@ camera_pan_to_and_back_seq :: proc(targetPos:Vec2, startDuration:int, holdDurati
 camera_update_position :: proc(){
 	if len(camera.tracking) != 0 && !debug_free_cam_enabled(){
 		total:Vec2
-		#reverse for ref,i in camera.tracking{
-			tr := coget(ref)
-			if tr == nil do unordered_remove(&camera.tracking, i)
-			else do total += tr.pos + {0, tr.z} + camera.tracking_offset 
+		#reverse for tracking,i in camera.tracking{
+			trackingPos,found := camera_tracking_target_get_pos(tracking)
+			if !found do unordered_remove(&camera.tracking, i)
+			else do total += trackingPos + camera.tracking_offset
 		}
 		if len(camera.tracking) != 0 do stage.target_camera_pos = total/f32(len(camera.tracking)) 
 	}
-	stage.camera_pos = round(stage.target_camera_pos) - display_size()/2
-	if !DEBUG || (debug.freeCamSpeed == 0 && !stage_edit.enabled) do stage.camera_pos = clamp(stage.camera_pos, stage.bounds.pos, rect_get_bottom_right_f(stage.bounds) - display_size())
+	
+	camPos := stage.target_camera_pos - display_size()/2
+	if !DEBUG || (debug.freeCamSpeed == 0 && !stage_edit.enabled) do camPos = clamp(camPos, stage.bounds.pos, rect_get_bottom_right_f(stage.bounds) - display_size())
+	stage.camera_pos, stage.camera_pos_subpixel = split(camPos)
 }
 
 

@@ -17,7 +17,7 @@ _cutscenes_reload_intro :: proc(){
 		stand := stageEntity_find("proSwordStand")
 		spriter_set(stand.spriter, sp.swordHolder_sword)
 
-		camera_tracking_set(pro.transform)
+		camera_tracking_set(pro)
 		return true
 	}
 
@@ -182,7 +182,7 @@ _cutscenes_reload_intro :: proc(){
 						dialogue_paragraph_draw(Rect{0, DISPLAY_SIZE}, di.credits, l^, COLOR_WHITE, fo.fairfax__12, true)
 						tex_target_reset()
 						alpha :f32= 0
-						t := creditsStartT+1
+						t := creditsStartT
 						if seq_cue(&t, 15) do alpha = seq_map(0,1)
 						if l^ == "introC"{
 							if seq_cue(&t, creditsDur-15) do alpha = 1
@@ -232,7 +232,7 @@ _cutscenes_reload_intro :: proc(){
 			scmove(pro, {{922,940}, {428,938}}, 3.5, moveSprite=pro.sprites.dash) &&
 			scmove(pro, {{430,754}}, curve=cu.easeIn) &&
 			b{
-			if creditsWarpSeq("introC", st.townHall, pro, {335,783}, onMid=proc(){camera_tracking_set(scfind("pro").transform)})
+			if creditsWarpSeq("introC", st.townHall, pro, {335,783}, onMid=proc(){camera_tracking_set(scfind("pro"))})
 			{
 				proc_call_delayed(proc(){cutscene_advance_dialogue()}, 1)
 				return seq_close(.end)
@@ -247,7 +247,7 @@ _cutscenes_reload_intro :: proc(){
 		if seq_open(){
 			pro := scfind("pro")
 			if seq_cue(0){
-				camera_tracking_set(pro.transform)
+				camera_tracking_set(pro)
 				phyllo := stageCharacter_make("phyllo", {336, 400}, .up)
 				phyllo.facePlayer = .ifInteractedWith
 				phyllo.stageInteractable.interactDialogue = di.intro
@@ -351,7 +351,7 @@ _cutscenes_reload_intro :: proc(){
 			t := int(time_convert(2.1, .seconds, .frames))
 			if seq_cue(&t,60){
 				seq_draw(proc(){
-					draw_rect(0, DISPLAY_SIZE, COLOR_WHITE, seq_map(1,0,cu.easeInStrong))
+					draw_rect_fullscreen(COLOR_WHITE, seq_map(1,0,cu.easeInStrong))
 				})
 			}
 			

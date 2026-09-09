@@ -20,10 +20,10 @@ self := cast(^PivotalChoice)base
 using self
 #partial switch event{
 case .init:
-	depth = -DEPTH_MAX - 100
 case .update:
 	age+=1
-case .drawEnd:
+case .draw:
+	render_depth_ui(.menus, -50) //in front of the other menus and the transition fade
 	fadeInTime :: 120
 	fadeOutTime :: 180
 	fonts.default = fo.GoetheBold__20
@@ -72,7 +72,7 @@ case .drawEnd:
 		connectionPressing:bool
 		switch input_device(){
 			case .keyboard: connectionPressing = key_pressed(.SPACE)
-			case .gamepad: connectionPressing = button_pressed(input.last_device, .LEFTSTICK) || button_pressed(input.last_device, .RIGHTSTICK)
+			case .gamepad: connectionPressing = button_pressed(input.last_device, .LEFT_STICK) || button_pressed(input.last_device, .RIGHT_STICK)
 		}
 
 		if (hovering && selected) || (age>fadeInTime && connectionPressing){

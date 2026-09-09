@@ -111,7 +111,7 @@ _cutscenes_reload :: proc(){
 			}
 			
 			if transition_seq(proc(){
-				camera_tracking_set(combat.selected_unit.stageEntity.transform)
+				camera_tracking_set(combat.selected_unit.stageCharacter._ptr)
 				camera_update_position()
 				camera_tracking_set()
 
@@ -212,7 +212,7 @@ _cutscenes_reload :: proc(){
 				p := entity_make(Player)
 				transform_set(p.transform, centerPos + {0,64})
 				scface(p.stageCharacter, .down)
-				camera_tracking_set(p.transform)
+				camera_tracking_set(p.stageCharacter._ptr)
 
 				proc_call_delayed(proc(){game_save()}, 1) //save game after player array has settled
 			}

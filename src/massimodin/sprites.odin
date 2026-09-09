@@ -1,6 +1,6 @@
 package massimodin //@nested-tags:engine/sprites
 
-import "../sdl2"
+import "../sdl3"
 import "core:math/linalg"
 import "core:math"
 
@@ -12,8 +12,7 @@ SpriteSystem :: struct{
 	names:[dynamic]string,
 	_sprite_nil:Sprite,
 	_spriteFrame_nil:SpriteFrame,
-	_texture_page_nil:^sdl2.Texture,
-	_texture_page_surface_nil:^sdl2.Surface,
+	_texture_page_nil:TexturePage,
 	nineslice_info:map[^Sprite]NinesliceInfo,
 	file_tree:^FileTreeFolder, //used for asset browsing in debug mode
 	_debug_mask_textures_loaded:bool,
@@ -37,15 +36,15 @@ _sprite_system_init :: proc(){
 		sprites.file_tree = file_tree_folder_new("sprites")
 	}
 
-	sprites._texture_page_nil = sdl2.CreateTexture(display._renderer, u32(sdl2.PixelFormatEnum.ABGR8888), sdl2.TextureAccess.STATIC, 1, 1)
-	sprites._texture_page_surface_nil = sdl2.CreateRGBSurfaceWithFormat(0, 1, 1, 32, u32(sdl2.PixelFormatEnum.ABGR8888))
+	sprites._texture_page_nil = TexturePage{
+		texture = texture_make_from_pixels({0,0,0,0}, 1),
+		surface = sdl3.CreateSurface(1, 1, .ABGR8888),
+		size = 1,
+	}
 	sprites._spriteFrame_nil = SpriteFrame{
-		sprites._texture_page_nil,
-		sprites._texture_page_surface_nil,
-		sdl2.Rect{0,0,1,1},
-		sdl2.Point{0,0},
-		20,
-		0,
+		texturePage = &sprites._texture_page_nil,
+		texturePagePos = Rect{{0,0},{1,1}},
+		duration = 20,
 	}
 
 	sprites._sprite_nil = Sprite{
@@ -54,7 +53,7 @@ _sprite_system_init :: proc(){
 		nil,
 		20,
 		{1, 1},
-		sdl2.Point{0,0},
+		Vec2{0,0},
 		false
 	}
 	sp.nil_ = &sprites._sprite_nil
@@ -62,10 +61,9 @@ _sprite_system_init :: proc(){
 }
 
 SpriteFrame :: struct{
-    texturePage:^sdl2.Texture,
-    texturePageSurface:^sdl2.Surface,
-    texturePagePos:sdl2.Rect,
-	trimOffset:sdl2.Point,
+    texturePage:^TexturePage,
+    texturePagePos:Rect,
+	trimOffset:Vec2,
     duration:f32, //in ms
 	framePosition:f32 //also in ms
 }
@@ -76,7 +74,7 @@ Sprite :: struct{
 	mask:^ColliderMask,
 	totalDuration:f32, //in ms
 	size:Vec2,
-	origin:sdl2.Point,
+	origin:Vec2,
 	pingPong:bool
 }
 
@@ -84,90 +82,95 @@ TextureGroup :: struct{
 	pages:[dynamic]TexturePage,
 	name:string,
 	loadState:TexturePageLoadState,
-	isHD:bool
+	hd:bool
 }
 
 TexturePage :: struct{
-	using texture:^sdl2.Texture,
-	surface:^sdl2.Surface,
-	
+	//these fields are read by every sprite draw, keep them together
+	using texture:^sdl3.GPUTexture,
+	size:f32, //the virtual page size, which is what uvs normalize against. same as the actual size unless the page is mip-mapped. Pages are always square.
+	hd:bool,
+
 	//set these at startup while reading the index
+	surface:^sdl3.Surface,
 	spriteFrames:[]^SpriteFrame,
-	loadAllocator:Allocator, //freed when page is unloaded
-	loadTempAllocator:Allocator, //freed when page is done loading
-	size:i32,
-
-	textureRowsLoaded:i32
+	loadAllocator:Allocator //freed when page is unloaded
 }
 
-sprite_page_size :: proc(s:^Sprite, frameInd:=0) -> Vec2{
-	surf := s.frames[frameInd].texturePageSurface
-	return Vec2{f32(surf.w), f32(surf.h)}
+sprite_page_size :: #force_inline proc "contextless" (s:^Sprite, frameInd:=0) -> Vec2{
+	size := s.frames[frameInd].texturePage.size
+	return Vec2{size, size}
 }
 
-sprite_draw_i :: proc "contextless" (sp:^Sprite, #any_int x:i32, #any_int y:i32, frameIndex:=0){
-	assert_contextless(sp != nil, "Trying to draw nil sprite!")
-
-    //frame := sp.frames[i64(math.wrap(f32(frameIndex), f32(len(sp.frames))))]
-	frame := sp.frames[frameIndex]
-    destRect := frame.texturePagePos //copy the source width and height
-    destRect.x = x + frame.trimOffset.x - sp.origin.x
-    destRect.y = y + frame.trimOffset.y - sp.origin.y
-	destRect.x -= camera.pos.x
-	destRect.y -= camera.pos.y
-
-	sdl2.SetTextureColorMod(frame.texturePage, 255, 255, 255)
-	sdl2.SetTextureAlphaMod(frame.texturePage, 255)
-	sdl2.SetTextureBlendMode(frame.texturePage, .BLEND)
-    sdl2.RenderCopy(display._renderer, frame.texturePage, &frame.texturePagePos, &destRect)
+//Normalized uv rect for a sub-rect of the frame's page.
+//Divide by the virtual page size even for mip-mapped pages to keep coordinates consistent
+texture_page_uv :: #force_inline proc "contextless" (page:^TexturePage, r:Rect) -> [4]f32{
+	inv := 1.0/page.size
+	return {r.x*inv, r.y*inv, (r.x+r.size.x)*inv, (r.y+r.size.y)*inv}
 }
-sprite_draw_vec2 :: #force_inline proc "contextless" (sp:^Sprite, pos:Vec2, frameIndex := 0){
-    sprite_draw_i(sp, i32(pos.x), i32(pos.y), frameIndex)
+spriteFrame_uv :: #force_inline proc "contextless" (frame:^SpriteFrame, r:Rect) -> [4]f32{
+	return texture_page_uv(frame.texturePage, r)
 }
-sprite_draw_f :: #force_inline proc "contextless" (sp:^Sprite, x,y:f32, frameIndex := 0){
-    sprite_draw_i(sp, i32(x), i32(y), frameIndex)
+
+//hd pages are high resolution art and get a mip chain, sd pages keep nearest for pixel art
+spriteFrame_sampler :: #force_inline proc "contextless" (frame:^SpriteFrame) -> SamplerKind{
+	return frame.texturePage.hd ? .linearMip : .nearest
+}
+
+sprite_draw_vec2 :: #force_inline proc (sp:^Sprite, pos:Vec2, frameIndex := 0){
+	assert(sp != nil, "Trying to draw nil sprite!")
+
+	frame := &sp.frames[frameIndex]
+
+	render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+		worldRect = {pos + frame.trimOffset - sp.origin, frame.texturePagePos.size},
+		uvRect = spriteFrame_uv(frame, frame.texturePagePos),
+		blend = BLEND_WHITE
+	})
+}
+sprite_draw_i :: proc(sp:^Sprite, #any_int x:i32, #any_int y:i32, frameIndex:=0){
+	sprite_draw_vec2(sp, {f32(x),f32(y)}, frameIndex)
+}
+sprite_draw_f :: #force_inline proc (sp:^Sprite, x,y:f32, frameIndex := 0){
+    sprite_draw_vec2(sp, {x,y}, frameIndex)
 }
 sprite_draw :: proc{sprite_draw_i, sprite_draw_f, sprite_draw_vec2}
 
 
-sprite_draw_ex_f :: proc "contextless" (sp:^Sprite, x,y:f32, frameIndex:=0, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, blendmode:=BlendMode.blend){
-	assert_contextless(sp != nil, "Trying to draw nil sprite!")
+sprite_draw_ex_vec2 :: #force_inline proc (sp:^Sprite, pos:Vec2, frameIndex:=0, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, feetPos:Maybe(Vec2)=nil){
+	assert(sp != nil, "Trying to draw nil sprite!")
 
 	angle := angle
-	flip := [2]int{int(scale.x < 0), int(scale.y < 0)}
-	if (flip.x == 1 && flip.y == 1){
-		angle += 180
-		flip = {0,0}
-	}
-	flipConst := sdl2.RendererFlip(flip.x + flip.y*2)
+	flip := [2]bool{scale.x < 0, scale.y < 0}
 
-	frame := sp.frames[frameIndex]
+	frame := &sp.frames[frameIndex]
 
-	//convert origin and new sizes to f32 for transformation and adjust for trim
-	size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+	//adjust the origin and new sizes for trim
+	size := frame.texturePagePos.size
 	newSize := size*abs(scale)
 	sizeDelta := newSize - size
 
-	origin := Vec2{f32(sp.origin.x - frame.trimOffset.x), f32(sp.origin.y - frame.trimOffset.y)}
-	origin.x += (size.x - origin.x*2 - 1)*f32(flip.x)
-	origin.y += (size.y - origin.y*2 - 1)*f32(flip.y)
+	origin := sp.origin - frame.trimOffset
+	origin += (size - origin*2 - 1)*Vec2(cast([2]u8)flip)
 
-    destRect := sdl2.Rect{
-		i32(math.round(x - origin.x - origin.x/size.x*sizeDelta.x)) - camera.pos.x,
-    	i32(math.round(y - origin.y - origin.y/size.y*sizeDelta.y)) - camera.pos.y,
-		i32(math.round(newSize.x)),
-		i32(math.round(newSize.y))
-	}
+	flags:QuadFlags
+	if flip.x do flags += {.flipX}
+	if flip.y do flags += {.flipY}
+	feet, hasFeet := feetPos.?
+	if hasFeet do flags += {.verticalShading}
 
-	pivot := sdl2.Point{i32(math.round(origin.x*abs(scale.x))), i32(math.round(origin.y*abs(scale.y)))}
-	
-	sdl2.SetTextureColorMod(frame.texturePage, color.r, color.g, color.b)
-	sdl2.SetTextureAlphaMod(frame.texturePage, u8(clamp(alpha*255, 0, 255)))
-	sdl2.SetTextureBlendMode(frame.texturePage, display.custom_blendmodes[blendmode])
-	sdl2.RenderCopyEx(display._renderer, frame.texturePage, &frame.texturePagePos, &destRect, f64(-angle), &pivot, flipConst)
+	render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+		worldRect = {round(pos - origin - origin/size*sizeDelta), round(newSize)},
+		uvRect = spriteFrame_uv(frame, frame.texturePagePos),
+		feetPos = feet,
+		pivot = round(origin*abs(scale)),
+		rotation = angle_to_rads(-angle),
+		blend = color_to_blend(color, alpha),
+		flags = flags,
+	})
 }
-sprite_draw_ex_vec2 :: #force_inline proc "contextless" (sp:^Sprite, pos:Vec2, frameIndex:=0, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, blendmode:=BlendMode.blend){
-	sprite_draw_ex_f(sp, pos.x, pos.y, frameIndex, scale, angle, color, alpha, blendmode)
+sprite_draw_ex_f :: proc (sp:^Sprite, x,y:f32, frameIndex:=0, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, feetPos:Maybe(Vec2)=nil){
+	sprite_draw_ex_vec2(sp, {x,y}, frameIndex, scale, angle, color, alpha, feetPos)
 }
 sprite_draw_ex :: proc{sprite_draw_ex_f, sprite_draw_ex_vec2}
 
@@ -175,22 +178,15 @@ sprite_draw_ex :: proc{sprite_draw_ex_f, sprite_draw_ex_vec2}
 sprite_draw_part_i :: proc(sp:^Sprite, #any_int x:i32, #any_int y:i32, part:Rect, frameIndex:=0){
 	assert(sp != nil, "Trying to draw sprite that was not initialized!")
 
-	frame := sp.frames[frameIndex]
+	frame := &sp.frames[frameIndex]
 
-	srcRect := frame.texturePagePos
-	srcRect.x += i32(part.x) - frame.trimOffset.x
-	srcRect.y += i32(part.y) - frame.trimOffset.y
-	srcRect.w = i32(part.size.x)
-	srcRect.h = i32(part.size.y)
+	srcRect := Rect{frame.texturePagePos.pos + part.pos - frame.trimOffset, part.size}
 
-    destRect := srcRect
-    destRect.x = x - camera.pos.x
-    destRect.y = y - camera.pos.y
-
-	sdl2.SetTextureColorMod(frame.texturePage, 255, 255, 255)
-	sdl2.SetTextureAlphaMod(frame.texturePage, 255)
-	sdl2.SetTextureBlendMode(frame.texturePage, .BLEND)
-    sdl2.RenderCopy(display._renderer, frame.texturePage, &srcRect, &destRect)
+	render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+		worldRect = {{f32(x), f32(y)}, srcRect.size},
+		uvRect = spriteFrame_uv(frame, srcRect),
+		blend = BLEND_WHITE,
+	})
 }
 sprite_draw_part_vec2 :: #force_inline proc(sp:^Sprite, pos:Vec2, part:Rect, frameIndex := 0){
     sprite_draw_part_i(sp, i32(pos.x), i32(pos.y), part, frameIndex)
@@ -210,30 +206,26 @@ Draws part of a sprite, stretched to fit into a given destination area.
 Ignores the sprite origin, you can provide a custom pivot point (relative to the draw area) for angled draws.
 NOTE: Drawing untrimmed whitespace around the sprite might unintentionally draw other parts of the texture page.
 */
-sprite_draw_part_ex :: proc(sp:^Sprite, drawArea:Rect, part:Rect, frameIndex:=0, flipConst:=sdl2.RendererFlip.NONE, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, blendmode:=BlendMode.blend, pivotPoint:=Vec2{}){
-	frame := sp.frames[frameIndex]
+sprite_draw_part_ex :: proc(sp:^Sprite, drawArea:Rect, part:Rect, frameIndex:=0, flipConst:=sdl3.FlipMode.NONE, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, pivotPoint:=Vec2{}){
+	frame := &sp.frames[frameIndex]
 
-	srcRect := sdl2.Rect{
-		frame.texturePagePos.x + i32(math.round(part.x)) - frame.trimOffset.x,
-		frame.texturePagePos.y + i32(math.round(part.y)) - frame.trimOffset.y,
-		i32(math.round(part.size.x)),
-		i32(math.round(part.size.y))
+	srcRect := Rect{
+		frame.texturePagePos.pos - frame.trimOffset + round(part.pos),
+		round(part.size)
 	}
 
-	destRect := sdl2.Rect{
-		i32(math.round(drawArea.x)) - camera.pos.x,
-    	i32(math.round(drawArea.y)) - camera.pos.y,
-		i32(math.round(drawArea.size.x)),
-		i32(math.round(drawArea.size.y))
-	}
+	flags:QuadFlags
+	if flipConst == .HORIZONTAL do flags += {.flipX}
+	if flipConst == .VERTICAL do flags += {.flipY}
 
-
-	pivot := sdl2.Point{i32(math.round(pivotPoint.x)), i32(math.round(pivotPoint.y))}
-	
-	sdl2.SetTextureColorMod(frame.texturePage, color.r, color.g, color.b)
-	sdl2.SetTextureAlphaMod(frame.texturePage, u8(clamp(alpha*255, 0, 255)))
-	sdl2.SetTextureBlendMode(frame.texturePage, display.custom_blendmodes[blendmode])
-	sdl2.RenderCopyEx(display._renderer, frame.texturePage, &srcRect, &destRect, f64(-angle), &pivot, flipConst)
+	render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+		worldRect = {{math.round(drawArea.x), math.round(drawArea.y)}, {math.round(drawArea.size.x), math.round(drawArea.size.y)}},
+		uvRect = spriteFrame_uv(frame, srcRect),
+		pivot = {math.round(pivotPoint.x), math.round(pivotPoint.y)},
+		rotation = angle_to_rads(-angle),
+		blend = color_to_blend(color, alpha),
+		flags = flags,
+	})
 }
 
 sprite_draw_rect_f :: proc(sp:^Sprite, x:f32=0, y:f32=0, frameIndex:=0, scale:=Vec2{1,1}) -> Rect{
@@ -241,12 +233,12 @@ sprite_draw_rect_f :: proc(sp:^Sprite, x:f32=0, y:f32=0, frameIndex:=0, scale:=V
 
 	frame := sp.frames[frameIndex]
 
-	//convert origin and new sizes to f32 for transformation and adjust for trim
-	size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+	//adjust the origin and new sizes for trim
+	size := frame.texturePagePos.size
 	newSize := size*abs(scale)
 	sizeDelta := newSize - size
 
-	origin := Vec2{f32(sp.origin.x - frame.trimOffset.x), f32(sp.origin.y - frame.trimOffset.y)}
+	origin := sp.origin - frame.trimOffset
 	origin.x += (size.x - origin.x*2 - 1)*f32(flip.x)
 	origin.y += (size.y - origin.y*2 - 1)*f32(flip.y)
 
@@ -346,7 +338,7 @@ sprite_find :: #force_inline proc (name:string) -> ^Sprite{
 // 	p2 := p1 + {frame.texturePagePos.w, frame.texturePagePos.h}
 
 // 	tsizeI:[2]i32
-// 	sdl2.QueryTexture(frame.texture, nil, nil, &tsizeI.x, &tsizeI.y)
+// 	sdl3.QueryTexture(frame.texture, nil, nil, &tsizeI.x, &tsizeI.y)
 // 	tsize := Vec2(tsizeI)
 // 	p1 /= tsize
 // 	p2 /= tsize

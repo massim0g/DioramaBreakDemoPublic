@@ -1,84 +1,66 @@
 package massimodin //@nested-tags:engine/visuals
 
-import "../sdl2"
+import "../sdl3"
 import "core:image/png"
 import "core:os"
-import "core:math"
 import "core:mem"
-import "../tracy"
 
 Tex :: struct{
-	using ptr:^sdl2.Texture,
-	size:Vec2i, //"logical" size. The true size of hd texes is smaller in reduced performance modes.
+	using ptr:^sdl3.GPUTexture,
+	size:Vec2i,
 	hd:bool
 }
 
-TexBuffer :: struct{
-	textures:[2]Tex,
-	active:int
+TexBuffered :: struct{
+	using tex:Tex,
+	scratch:Tex
 }
 
-//Sets the current drawing target.
-tex_target_set :: proc(target:Tex, camPos:=Vec2{0,0}, clear:=true){
-	append(&display._tex_target_stack, target)
-	sdl2.SetRenderTarget(display._renderer, target)
-	_render_scale_update()
+tex_target_set_tex :: proc(target:Tex, camPos:=Vec2{0,0}, clear:=true, coordScale:f32=1){
+	if coordScale == 1 do append(&render._entries, RenderEntryTarget{target, Vec2(target.size)})
+	else do append(&render._entries, new_clone(RenderEntryTargetOverloaded{target, Vec2(target.size), nil, coordScale}, context.temp_allocator))
+
 	camera_set(camPos)
-	if(clear) do draw_clear(COLOR_WHITE, 0)
+	if clear do draw_clear(COLOR_WHITE, 0)
 }
+tex_target_set_buffered :: proc(target:TexBuffered, camPos:=Vec2{0,0}, clear:=true, coordScale:f32=1){
+	append(&render._entries, new_clone(RenderEntryTargetOverloaded{target.tex, Vec2(target.size), target.scratch, coordScale}, context.temp_allocator))
 
-//Sets the drawing target without affecting the stack. Should only be used for performance optimization.
-tex_target_set_stackless :: proc(target:^sdl2.Texture, camPos:=Vec2{0,0}){
-	sdl2.SetRenderTarget(display._renderer, target)
-	camera.pos = {i32(round(camPos.x)), i32(round(camPos.y))}
+	camera_set(camPos)
+	if clear do draw_clear(COLOR_WHITE, 0)
 }
+tex_target_set :: proc{tex_target_set_tex, tex_target_set_buffered}
 
-//Resets the drawing target to the previous target. 
+//Resets the drawing target to the previous target.
 tex_target_reset :: proc(resetCount:=1){
-	if len(display._tex_target_stack) < 1+resetCount{
-		tex_target_clear()
-		return
-	}
-
-	for i in 0..<resetCount{
-		pop(&display._tex_target_stack)
-	}
-
-	stackL := len(display._tex_target_stack)
-	sdl2.SetRenderTarget(display._renderer, display._tex_target_stack[stackL - 1])
-	_render_scale_update()
 	camera_reset(resetCount)
+	append(&render._entries, RenderEntryTargetPop{resetCount})
 }
 
-//Clears the texture target stack and targets the window (nil). Also resets the camera.
+//Clears the texture target stack and targets the window. Also resets the camera.
 tex_target_clear :: proc(){
-	clear(&display._tex_target_stack)
-	sdl2.SetRenderTarget(display._renderer, nil)
-	_render_scale_update()
+	append(&render._entries, RenderEntryTargetClear{})
 	camera_clear()
 }
 
-//Returns the current texture target
-tex_target_get :: #force_inline proc "contextless"() -> Tex{
-	stackL := len(display._tex_target_stack)
-	return (stackL > 0) ? display._tex_target_stack[stackL - 1] : Tex{size={-1, -1}}
-}
-
-//HD texes' true sizes are smaller than their "logical" size in reduced performance modes.
-//This proc converts from that logical size to the true size based on the current perf setting.
-tex_hd_size_to_true_size :: #force_inline proc "contextless" (w,h:int) -> Vec2i{
-	dpf := int(display_performance_factor())
-	return {w/dpf, h/dpf}
+//hd content is high resolution art, sd targets keep nearest for pixel art
+tex_sampler :: #force_inline proc "contextless" (tex:Tex) -> SamplerKind{
+	return tex.hd ? .linear : .nearest
 }
 
 tex_make_i :: proc(w,h:int, hd:=false) -> Tex{
 	assert(w >= 0 && h >= 0, "Cannot create a texture with negative size!")
-	trueSize := hd ? tex_hd_size_to_true_size(w,h) : Vec2i{w,h}
-	out := Tex{sdl2.CreateTexture(display._renderer, u32(sdl2.PixelFormatEnum.ABGR8888), .TARGET, i32(trueSize.x), i32(trueSize.y)), {w, h}, hd}
-	sdl2.SetTextureBlendMode(out, .BLEND)
-	if hd do sdl2.SetTextureScaleMode(out, .Linear) //hd content is high resolution art, sd targets keep nearest for pixel art
-	//when tracy.TRACY_ENABLE do tracy.EmitAlloc(slice_from_ptr(cast(^u8)out.ptr, 1), trueSize.x*trueSize.y*4, tracy.TRACY_CALLSTACK, true)
-	return out
+	ptr := sdl3.CreateGPUTexture(render.device, {
+		type=.D2,
+		format=TEXTURE_FORMAT_DEFAULT,
+		usage={.SAMPLER, .COLOR_TARGET},
+		width=u32(max(w, 1)),
+		height=u32(max(h, 1)),
+		layer_count_or_depth=1,
+		num_levels=1,
+	})
+	assertf(ptr != nil, "GPU texture creation failed (%dx%d)! %s", w, h, sdl3.GetError())
+	return Tex{ptr, {w, h}, hd}
 }
 tex_make_f :: #force_inline proc(w,h:f32, hd:=false) -> Tex{
 	return tex_make_i(int(w), int(h), hd)
@@ -106,25 +88,14 @@ tex_make_from_file :: proc(path:string) -> Tex{
 	assertf(imgErr == nil, "Error '%v' when loading image file '%s'!", imgErr, path)
 	assertf(img.depth == 8 && img.channels == 4, "Image file '%s' has an unsupported format (%d channels, %d bit)!", path, img.channels, img.depth)
 
-	surf := sdl2.CreateRGBSurfaceWithFormatFrom(
-		raw_data(img.pixels.buf), i32(img.width), i32(img.height), 32, i32(img.width*4),
-		u32(sdl2.PixelFormatEnum.ABGR8888),
-	)
-	defer sdl2.FreeSurface(surf)
-	t := sdl2.CreateTextureFromSurface(display._renderer, surf)
-	return Tex{t, Vec2i{img.width, img.height}, false}
-}
-
-tex_blendmode_set :: #force_inline proc(tex:Tex, blendmode:BlendMode){
-	sdl2.SetTextureBlendMode(tex, display.custom_blendmodes[blendmode])
+	size := Vec2i{img.width, img.height}
+	return Tex{texture_make_from_pixels(img.pixels.buf[:], size), size, false}
 }
 
 tex_destroy :: proc(tex:Tex){
 	if tex.ptr == nil do return
-	//when tracy.TRACY_ENABLE do tracy.EmitFree(tex.ptr, tracy.TRACY_CALLSTACK, true)
-	sdl2.DestroyTexture(tex)
+	append(&render.tex_destroy_list, tex)
 }
-
 
 tex_resize_f :: #force_inline proc(tex:^Tex, w,h:f32){
 	tex_resize_i(tex, int(w), int(h))
@@ -141,140 +112,135 @@ tex_resize_i :: proc(tex:^Tex, w,h:int){
 		return
 	}
 
-	if tex.hd{ 
-		trueW, trueH:i32
-		sdl2.QueryTexture(tex.ptr, nil, nil, &trueW, &trueH)
-		if (Vec2i{int(trueW), int(trueH)} == tex_hd_size_to_true_size(w,h)) do return
-	}
-	else if tex.size == {w,h} do return
+	if tex.size == {w,h} do return
 
-	sm:sdl2.ScaleMode
-	bm:sdl2.BlendMode
-	sdl2.GetTextureScaleMode(tex, &sm)
-	sdl2.GetTextureBlendMode(tex, &bm)
+	hd := tex.hd
 	tex_destroy(tex^)
-	tex^ = tex_make_i(w,h, tex.hd)
-	sdl2.SetTextureScaleMode(tex, sm)
-	sdl2.SetTextureBlendMode(tex, bm)
+	tex^ = tex_make_i(w,h, hd)
 }
 //WARNING: Will delete and recreate (or just create, if nil) the underlying texture, ensure nothing else is using it.
+//If called on a texture that has already been used as a target this frame, the render plan will still use the old texture.
 tex_resize :: proc{tex_resize_i, tex_resize_veci, tex_resize_f, tex_resize_vec}
 
-tex_draw_i :: proc(tex:Tex, x:i32, y:i32){
-	assert(tex.ptr != tex_target_get().ptr, "Tried to draw current target texture!")
-	dstRect := sdl2.Rect{x - camera.pos.x, y - camera.pos.y, i32(tex.size.x), i32(tex.size.y)}
-
-	sdl2.SetTextureColorMod(tex.ptr, 255, 255, 255)
-	sdl2.SetTextureAlphaMod(tex.ptr, 255)
-	sdl2.RenderCopy(display._renderer, tex, nil, &dstRect)
-}
 tex_draw_f :: #force_inline proc(tex:Tex, x,y:f32){
-	tex_draw_i(tex, i32(x), i32(y))
+	tex_draw_vec2(tex, {x,y})
 }
 tex_draw_vec2 :: #force_inline proc(tex:Tex, pos:Vec2){
-	tex_draw_i(tex, i32(pos.x), i32(pos.y))
+	render_quad(tex.ptr, tex_sampler(tex), Quad{
+		worldRect = {pos, Vec2(tex.size)},
+		uvRect = {0,0,1,1},
+		blend = BLEND_WHITE,
+	})
 }
 //Draws a texture. Will throw an error if you try to draw the current target texture.
 tex_draw :: proc{tex_draw_f, tex_draw_vec2}
 
-tex_draw_ex_f :: proc(tex:Tex, x,y:f32, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, pivot:=Vec2{}){
-	flip := [2]int{int(scale.x < 0), int(scale.y < 0)}
-	assert(!(flip.x == 1 && flip.y == 1), "Only one tex scale can be negative at a time!")
-	flipConst := sdl2.RendererFlip(flip.x + flip.y*2)
+tex_draw_ex_f :: proc(tex:Tex, x,y:f32, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, pivot:=Vec2{}, feetPos:Maybe(Vec2)=nil){
 
-	//convert origin and new sizes to f32 for transformation and adjust for trim
 	size := Vec2(tex.size)
 	newSize := size*abs(scale)
-	sizeDelta := newSize - size
 
-    destRect := sdl2.Rect{
-		i32(math.round(x)) - camera.pos.x,
-    	i32(math.round(y)) - camera.pos.y,
-		i32(math.round(newSize.x)),
-		i32(math.round(newSize.y))
-	}
+	flags:QuadFlags
+	if scale.x < 0 do flags += {.flipX}
+	if scale.y < 0 do flags += {.flipY}
+	feet, hasFeet := feetPos.?
+	if hasFeet do flags += {.verticalShading}
 
-	pivot := sdl2.Point{i32(pivot.x),i32(pivot.y)}
-	
-	sdl2.SetTextureColorMod(tex.ptr, color.r, color.g, color.b)
-	sdl2.SetTextureAlphaMod(tex.ptr, u8(clamp(alpha*255, 0, 255)))
-	sdl2.RenderCopyEx(display._renderer, tex.ptr, nil, &destRect, f64(-angle), &pivot, flipConst)
+	render_quad(tex.ptr, tex_sampler(tex), Quad{
+		worldRect = {{round(x), round(y)}, {round(newSize.x), round(newSize.y)}},
+		uvRect = {0,0,1,1},
+		feetPos = feet,
+		pivot = pivot,
+		rotation = angle_to_rads(-angle),
+		blend = color_to_blend(color, alpha),
+		flags = flags,
+	})
 }
-tex_draw_ex_vec2 :: #force_inline proc(tex:Tex, pos:Vec2, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, pivot:=Vec2{}){
-	tex_draw_ex_f(tex, pos.x, pos.y, scale, angle, color, alpha, pivot)
+tex_draw_ex_vec2 :: #force_inline proc(tex:Tex, pos:Vec2, scale:=Vec2{1,1}, angle:f32=0, color:Color=COLOR_WHITE, alpha:f32=1, pivot:=Vec2{}, feetPos:Maybe(Vec2)=nil){
+	tex_draw_ex_f(tex, pos.x, pos.y, scale, angle, color, alpha, pivot, feetPos)
 }
 tex_draw_ex :: proc{tex_draw_ex_f, tex_draw_ex_vec2}
 
-//Draw a texture perspective-projected onto a quadrilateral
+//Draw a texture perspective-projected onto a quadrilateral. The quad corners are in screen space.
 tex_draw_perspective :: proc(tex:Tex, quad:[4]Vec2){
-	quad:=quad
-	camPos := Vec2(camera.pos)
-	for &p in quad{
-		p -= camPos
-	}
-
-	shader_set(sh.perspective)
-
 	transform := matrix_inverse(perspective_transform_make(quad))
-	shader_uniform_set(sh.perspective, "texture", i32(0))
-	shader_uniform_matrix_set(sh.perspective, "transform", &transform)
-	shader_uniform_set_using_loc(shader_uniform_loc(sh.perspective, "screenSize"), f32(DISPLAY_WIDTH), f32(DISPLAY_HEIGHT))
+	p := Sh_Perspective{screenSize = Vec2{DISPLAY_WIDTH, DISPLAY_HEIGHT}}
+	//hlsl cbuffer matrices are column_major, one column per 16-byte row, so the 3x3 spreads into a [3][4]f32
+	for c in 0..<3{
+		for r in 0..<3 do p.transform[c][r] = transform[r, c]
+	}
+	shader_set(p)
 
-	dstRect := sdl2.Rect{0, 0, i32(DISPLAY_WIDTH), i32(DISPLAY_HEIGHT)}
-	sdl2.RenderCopy(display._renderer, tex, nil, &dstRect)
-	
+	//the shader does the projection, the draw is just a fullscreen quad sampling the source
+	camera_set(0)
+	render_quad(tex.ptr, tex_sampler(tex), Quad{
+		worldRect = {size = DISPLAY_SIZE},
+		uvRect = {0,0,1,1},
+		blend = BLEND_WHITE,
+	})
+	camera_reset()
+
 	shader_reset()
 }
 
 texes_to_sprite :: proc(texes:[]Tex, origin:=Vec2{}, durations:[]f32=nil, allocator:=context.temp_allocator) -> ^Sprite{
 	out := new(Sprite, allocator)
-	out.origin = sdl2.Point{i32(origin.x), i32(origin.y)}
+	out.origin = origin
 	out.frames = make([dynamic]SpriteFrame, len(texes), allocator)
 	t :f32= 0
 	for tex,i in texes{
 		d:f32
 		if i < len(durations) do d = durations[i]
+
+		//each tex becomes its own one-frame page. Page uvs normalize against a single dimension, so a non-square tex here would sample wrong
+		page := new(TexturePage, allocator)
+		page^ = TexturePage{texture=tex.ptr, size=f32(tex.size.x), hd=tex.hd}
+
 		out.frames[i] = SpriteFrame{
-			tex.ptr,
-			sprites._texture_page_surface_nil,
-			sdl2.Rect{0,0,i32(tex.size.x), i32(tex.size.y)},
-			sdl2.Point{},
-			d,
-			t,
+			texturePage = page,
+			texturePagePos = Rect{{0,0}, Vec2(tex.size)},
+			duration = d,
+			framePosition = t,
 		}
 		t += d
 	}
 	return out
 }
 
-surface_pixel_get :: proc "contextless" (surf:^sdl2.Surface, x:int, y:int) -> Blend{
+surface_pixel_get :: proc "contextless" (surf:^sdl3.Surface, x:int, y:int) -> Blend{
 	if !rect_contains(Recti{0, {int(surf.w), int(surf.h)}}, Vec2i{x,y}) do return Blend{}
-	format := surf.format
+	formatDetails := sdl3.GetPixelFormatDetails(surf.format) //SDL3: surface format is an enum, details struct holds the layout
 	pixels := uintptr(surf.pixels)
 	pitch := uintptr(surf.pitch)
-	bpp := int(format.BytesPerPixel)
+	bpp := int(formatDetails.bytes_per_pixel)
 	bppUip := uintptr(bpp)
 
 	pixelData:u32
 	mem.copy(&pixelData, rawptr(pixels + uintptr(x)*bppUip + uintptr(y)*pitch), bpp)
 
 	out:Blend
-	sdl2.GetRGBA(pixelData, format, &out.r, &out.g, &out.b, &out.a)
-	
+	sdl3.GetRGBA(pixelData, formatDetails, nil, &out.r, &out.g, &out.b, &out.a)
+
 	return out
 }
 
-surface_pixel_filled :: #force_inline proc "contextless" (surf:^sdl2.Surface, x:int, y:int) -> bool{
+surface_pixel_filled :: #force_inline proc "contextless" (surf:^sdl3.Surface, x:int, y:int) -> bool{
 	return surface_pixel_get(surf,x,y).a != 0
 }
 
-texBuffer_make :: proc(size:Vec2) -> TexBuffer{
-	return TexBuffer{
-		{tex_make(size), tex_make(size)},
-		0
-	}
+texBuffered_make :: proc(size:Vec2) -> TexBuffered{
+	return TexBuffered{tex_make(size), tex_make(size)}
 }
 
-texBuffer_active_tex :: proc(buf:TexBuffer) -> Tex{
-	return buf.textures[buf.active]
+texBuffered_destroy :: proc(tex:TexBuffered){
+	tex_destroy(tex.tex)
+	tex_destroy(tex.scratch)
 }
+
+//snapshots the contents of a buffered tex to its scratch tex
+texBuffered_snapshot :: proc(tex:TexBuffered){
+	tex_target_set(tex.scratch)
+	tex_draw(tex, 0, 0)
+	tex_target_reset()
+}
+

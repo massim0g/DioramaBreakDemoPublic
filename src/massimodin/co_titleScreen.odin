@@ -1,7 +1,7 @@
 #+feature using-stmt
 package massimodin //@nested-tags:_components/
 
-import "../sdl2"
+import "../sdl3"
 import time_ "core:time"
 import "core:time/datetime"
 
@@ -14,7 +14,6 @@ TitleScreen :: struct{
 		credits
 	},
 	dustParticle:^ParticleType,
-	shineParticle:^ParticleType,
 	shineTex:Tex,
 
 	entryPerlinAlpha:f32,
@@ -65,9 +64,6 @@ titleScreen_main_button :: proc(label:string, textCol:=COLOR_WHITE) -> bool{
 	pos:=item.pos
 
 	cs := char_size('M')
-	if item.hoverTime == 0 && item.interactState == .hovered{
-		if settings.performance_mode == .normal do particles_emit(shineParticle, 2000, 1.75, Rect{pos+cs/2, 0})
-	}
 
 	#partial switch item.interactState{
 		case .disabled:
@@ -80,17 +76,41 @@ titleScreen_main_button :: proc(label:string, textCol:=COLOR_WHITE) -> bool{
 		case .hovered, .selected:
 			off := ui_cue_map(item.hoverTime, 0, 3, 0, cs.x/2-20)
 			angle := ui_cue_map(item.hoverTime, 0, 5, 90, 0, cu.easeIn)
-			if settings.performance_mode != .normal do angle = 0
 			scale := ui_cue_map(item.hoverTime, 0, 5, 0.66, 2, cu.easeIn)
 			texDp := pos+cs/2 - Vec2(shineTex.size)/2
 			text_draw(text, pos+{off,0}, textCol)
 			tex_target_set(shineTex, texDp, false)
 			draw_clear(COLOR_BLACK, 0)
 			text_draw(text, pos+{off,0}, textCol)
-			sprite_draw_ex(sp.menuShineHD, pos+cs/2, 0, scale, angle, blendmode=BlendMode.invert)
+			blendmode_set(.invert)
+			sprite_draw_ex(sp.menuShineHD, pos+cs/2, 0, scale, angle)
+			blendmode_set(.blend)
 			tex_target_reset()
 			tex_draw(shineTex, texDp)
 	}
+
+	
+	if item.hoverTime <= 12 && item.interactState == .hovered{
+		radius := ui_cue_map(item.hoverTime, 0, 12, 0, cs.x*1.2)
+		alpha := ui_cue_map(item.hoverTime, 0, 12, 3.67, 0, cu.easeInLinearStart)
+		draw_rings(pos+cs/2, {radius, radius-8}, alphas={alpha, alpha}, edgeSoftness=2)
+	}
+
+	return item.interactState == .selected
+}
+
+//simpler text button for the title screen's sub pages: lightens when hovered and slides right, no shine
+titleScreen_page_button :: proc(label:string, textCol:=COLOR_WHITE) -> bool{
+	text := dialogue_line(di.title, label)
+	item := ui_item_process(text_size(text))
+
+	off:f32
+	drawCol := textCol
+	if item.interactState == .hovered || item.interactState == .selected{
+		off = ui_cue_map(item.hoverTime, 0, 3, 0, char_size('M').x/2-20)
+		drawCol = color_lerp(textCol, COLOR_WHITE, 0.3)
+	}
+	text_draw(text, item.pos+{off,0}, drawCol)
 
 	return item.interactState == .selected
 }
@@ -112,19 +132,11 @@ case .init:
 	draw_clear(COLOR_BLACK)
 	tex_target_clear()
 	dustParticle = particle_type(sp.white1, 
-		40, 140, 0.5, 2, minScale=1, maxScale=3, alphaCurve=cu.easeInArc, angleChange=0.1, angleMatchesDir=false
+		40, 140, 0.5, 2, minScale=1, maxScale=3, alphaCurve=cu.easeInArc, angleChange=-0.1, angleMatchesDir=false
 	)
-	{
-		life :f32= 12
-		r := char_size('M', fo.anarcharsisSC__168).x
-		spd := (r/life)*2
-		shineParticle = particle_type(sp.white1, 
-			int(life*0.667), int(life), spd,spd, acceleration=-spd/life, minScale=4, alphaCurve=cu.easeInInverted
-		)
-	}
 case .update:
-	depth = clone([]f32{2,1,0}, context.temp_allocator)
-	if random(10) == 0 && settings.performance_mode == .normal do particles_emit(dustParticle, 1, choose([]f32{0.5, 1.5}), Rect{{1000, 10}, {1800, 1560}})
+	depth = 2 //diorama and menu layers draw in front via their own render_depth calls
+	if random(10) == 0 do particles_emit(dustParticle, 1, choose([]f32{0.5, 1.5}), Rect{{1000, 10}, {1800, 1560}})
 
 	if !cutscene.enabled && meditationMode{
 		connectionFail :: proc(self:^TitleScreen, d:string){
@@ -135,7 +147,7 @@ case .update:
 		pressing:bool
 		switch input_device(){
 			case .keyboard: pressing = key_held(.SPACE)
-			case .gamepad: pressing = button_held(input.last_device, .LEFTSTICK) || button_held(input.last_device, .RIGHTSTICK)
+			case .gamepad: pressing = button_held(input.last_device, .LEFT_STICK) || button_held(input.last_device, .RIGHT_STICK)
 		}
 		if pressing{
 			ui_cue("titleMeditation")
@@ -164,108 +176,120 @@ case .update:
 		}
 	}
 case .draw:
-	switch entities.draw_step{
-		case 0:
-			sprite_draw(sp.titleScreenBG_BG, 0, 0)
-			sprite_draw(sp.titleScreenBG_paintings, 0, 0)
-			sprite_draw(sp.titleScreenBG_dioramaShadow, 0, 0)
+	//bg
+	{
+		sprite_draw(sp.titleScreenBG_BG, 0, 0)
+		sprite_draw(sp.titleScreenBG_paintings, 0, 0)
+		sprite_draw(sp.titleScreenBG_dioramaShadow, 0, 0)
 
-			if entryShadowAlpha > 0 do draw_rect(Rect{0, display_size()}, COLOR_BLACK, alpha=entryShadowAlpha)
-
-		case 1:
-			sprite_draw(sp.titleScreenBG_diorama, 0, 0)
-
-			beamAlpha := min(entryRadialAlpha, entryRadialAlpha*0.25)
-			if beamAlpha > 0{
-				draw_blendmode(.add)
-				draw_ellipse(Vec2{1917, 1176}, wave(entryRadialRadius*2, entryRadialRadius*2*0.85, 3), innerAlpha=entryRadialAlpha, outerAlpha=0)
-				beamRect := rectf_make_points(1783, 0, 2055, 1234)
-				draw_rect(beamRect, COLOR_WHITE, wave(beamAlpha, beamAlpha*0.85, 3))
-				draw_blendmode(.blend)
-			}
-		case 2:
-			if cutscene.enabled || meditationMode do return
-
-			fadingOut := ui_cue_time("titleFadeOut") < TITLE_SCREEN_FADE_TIME
-			fadeOutAlpha :f32= fadingOut ? ui_cue_map("titleFadeOut", 0, TITLE_SCREEN_FADE_TIME, 1, 0) : 1
-
-			t :f32= TITLE_SCREEN_FADE_TIME+36
-			if currentPage == .main do sprite_draw_ex(sp.titleLogo, 100, 10, alpha=ui_cue_map("titleInit", t, t+48, 0, 1)*fadeOutAlpha)
-			t+=48
-
-			ui_begin("titleScreen", {140, 360})
-			if ui_cue_time("titleInit") < int(t+96) || fadingOut do ui.disabled = true
-			fonts.default = fo.anarcharsisSC__168
-			switch currentPage{
-				case .main:
-					if titleScreen_main_button("begin"){
-						ui_cue("titleFadeOut")
-						proc_call_delayed(proc(){
-							if game_load() do dialogue_open(di.prologueAndOutro, "loaded")
-							else do dialogue_open(di.prologueAndOutro, "start")
-						}, TITLE_SCREEN_FADE_TIME)
-					}
-					if titleScreen_main_button("settings"){
-						currentPage = .settings
-					}
-					if titleScreen_main_button("credits"){
-						currentPage = .credits
-					}
-					if titleScreen_main_button("community"){
-						sdl2.OpenURL("https://www.dioramabreak.com#community")
-					}
-					if titleScreen_main_button("quit") do game_quit()
-					fonts.default = fo.anarcharsisSC__84
-					ui_frame().cursorPos = Vec2{40, display_size().y - text_char_height()*2 - 48}
-					if titleScreen_main_button("kickstarter"){
-						sdl2.OpenURL("https://www.kickstarter.com/projects/massimog/diorama-break")
-					}
-					if titleScreen_main_button("wishlist"){
-						sdl2.OpenURL("https://store.steampowered.com/app/3932580/Diorama_Break/") 
-					}
-					text_draw(string_prettify(GAME_VERSION, true), display_size() - 40, COLOR_WHITE, ui_cue_map("titleInit", t, t+96, 0,1) * fadeOutAlpha, fo.notoSerif__64, alignment=Alignment{1,1})
-				case .settings:
-					settings_menu()
-				case .credits:
-					drawRect := rect_make_points(Vec2{100,100},display_size()-100)
-					dialogue_hd_box_draw(drawRect)
-					rect_resize_in_place(&drawRect, {-100, -64})
-					fonts.default = fo.notoSerifJP__40 //note: make sure whatever font is used supports mariru's name kanji
-					
-					dialogue_paragraph_draw(drawRect, di.credits, "main", COLOR_BLACK)
-
-					text_draw(dialogue_line(di.credits, "copyright"),
-						Vec2{rect_center(drawRect).x-30, rect_get_bottom(drawRect) - 60},
-						COLOR_BLACK, 0.5, fo.notoSerifJP__40, alignment=Alignment{0, -1}
-					)
-
-					fonts.default = fo.newsreader__70
-					ui_frame_begin(Vec2{drawRect.x, rect_get_bottom(drawRect) - text_char_height()})
-					if titleScreen_main_button("back", COLOR_BLACK) || ginputs[.cancel]{
-						currentPage = .main
-					}
-					ui_frame_end()
-
-			}
-			ui.disabled = false
-			ui_end()
+		if entryShadowAlpha > 0 do draw_rect_fullscreen(COLOR_BLACK, entryShadowAlpha)
 	}
-case .drawEnd:
-	if entities.draw_step == 0{
-		if entryTopLightAlpha > 0 do draw_rect(Rect{0, display_size()}, COLOR_WHITE, alpha=entryTopLightAlpha)
-		
-		if entryPerlinAlpha > 0{
-			shader_set(sh.meditationBG)
-			shader_uniform_set(sh.meditationBG, "time", f32(time.frame))
-			shader_uniform_set(sh.meditationBG, "strength", f32(entryPerlinStrength))
-			shader_uniform_set(sh.meditationBG, "scale", f32(5.5))
-			tex_draw_ex(perlinTex, 0, 0, alpha=entryPerlinAlpha)
-			shader_reset()
+
+	//diorama
+	render_depth(1)
+	{
+		sprite_draw(sp.titleScreenBG_diorama, 0, 0)
+
+		beamAlpha := min(entryRadialAlpha, entryRadialAlpha*0.25)
+		if beamAlpha > 0{
+			blendmode_set(.add)
+			draw_ellipse(Vec2{1917, 1176}, wave(entryRadialRadius*2, entryRadialRadius*2*0.85, 3), innerAlpha=entryRadialAlpha, outerAlpha=0)
+			beamRect := rectf_make_points(1783, 0, 2055, 1234)
+			draw_rect(beamRect, COLOR_WHITE, wave(beamAlpha, beamAlpha*0.85, 3))
+			blendmode_set(.blend)
 		}
 	}
+	
+	//menu
+	if !(cutscene.enabled || meditationMode){
+		render_depth_ui(.menus)
 
-	fadeInAlpha := ui_cue_map("titleInit", 0, TITLE_SCREEN_FADE_TIME, 1, 0)
-	if fadeInAlpha > 0 do draw_rect(0, display_size(), COLOR_BLACK, alpha=fadeInAlpha)
+		fadingOut := ui_cue_time("titleFadeOut") < TITLE_SCREEN_FADE_TIME
+		fadeOutAlpha :f32= fadingOut ? ui_cue_map("titleFadeOut", 0, TITLE_SCREEN_FADE_TIME, 1, 0) : 1
+
+		t :f32= TITLE_SCREEN_FADE_TIME+36
+		if currentPage == .main do sprite_draw_ex(sp.titleLogo, 100, 10, alpha=ui_cue_map("titleInit", t, t+48, 0, 1)*fadeOutAlpha)
+		t+=48
+
+		ui_begin("titleScreen", {140, 360})
+		if ui_cue_time("titleInit") < int(t+96) || fadingOut do ui.disabled = true
+		fonts.default = fo.anarcharsisSC__168
+		switch currentPage{
+			case .main:
+				if titleScreen_main_button("begin"){
+					ui_cue("titleFadeOut")
+					proc_call_delayed(proc(){
+						if game_load() do dialogue_open(di.prologueAndOutro, "loaded")
+						else do dialogue_open(di.prologueAndOutro, "start")
+					}, TITLE_SCREEN_FADE_TIME)
+				}
+				if titleScreen_main_button("settings"){
+					currentPage = .settings
+				}
+				if titleScreen_main_button("credits"){
+					currentPage = .credits
+				}
+				if titleScreen_main_button("community"){
+					_ = sdl3.OpenURL("https://www.dioramabreak.com#community")
+				}
+				if titleScreen_main_button("quit") do game_quit()
+				fonts.default = fo.anarcharsisSC__84
+				ui_frame().cursorPos = Vec2{40, display_size().y - text_char_height()*2 - 48}
+				if titleScreen_main_button("kickstarter"){
+					_ = sdl3.OpenURL("https://www.kickstarter.com/projects/massimog/diorama-break")
+				}
+				if titleScreen_main_button("wishlist"){
+					_ = sdl3.OpenURL(release_channel == .gog ? "https://www.gog.com/en/game/diorama_break" :
+						"https://store.steampowered.com/app/3932580/Diorama_Break/"
+					) 
+				}
+				text_draw(string_prettify(GAME_VERSION, true), display_size() - 40, COLOR_WHITE, ui_cue_map("titleInit", t, t+96, 0,1) * fadeOutAlpha, fo.notoSerif__64, alignment=Alignment{1,1})
+			case .settings:
+				settings_menu()
+			case .credits:
+				drawRect := rect_make_points(Vec2{100,100},display_size()-100)
+				dialogue_hd_box_draw(drawRect)
+				rect_resize_in_place(&drawRect, {-100, -64})
+				fonts.default = fo.notoSerifJP__40 //note: make sure whatever font is used supports mariru's name kanji
+				
+				dialogue_paragraph_draw(drawRect, di.credits, "main", COLOR_BLACK)
+
+				text_draw(dialogue_line(di.credits, "copyright"),
+					Vec2{rect_center(drawRect).x-30, rect_get_bottom(drawRect) - 60},
+					COLOR_BLACK, 0.5, fo.notoSerifJP__40, alignment=Alignment{0, -1}
+				)
+
+				fonts.default = fo.newsreader__70
+				ui_frame_begin(Vec2{drawRect.x, rect_get_bottom(drawRect) - text_char_height()})
+				if titleScreen_page_button("back", COLOR_BLACK) || ginputs[.cancel]{
+					currentPage = .main
+				}
+				ui_frame_end()
+
+		}
+		ui.disabled = false
+		ui_end()
+	}
+
+	//screen fade
+	render_depth_ui(.top)
+	{
+		if entryTopLightAlpha > 0 do draw_rect_fullscreen(COLOR_WHITE, entryTopLightAlpha)
+		
+		if entryPerlinAlpha > 0{
+			shader_set(Sh_MeditationBG{
+				time = f32(time.frame),
+				strength = f32(entryPerlinStrength),
+				scale = 5.5,
+			})
+			tex_draw_ex(perlinTex, 0, 0, alpha=entryPerlinAlpha)
+			shader_reset()
+		
+		}
+		fadeInAlpha := ui_cue_map("titleInit", 0, TITLE_SCREEN_FADE_TIME, 1, 0)
+		if fadeInAlpha > 0 do draw_rect_fullscreen(COLOR_BLACK, fadeInAlpha)
+	}
+
 
 case .clean:
 	ui_free("titleScreen")

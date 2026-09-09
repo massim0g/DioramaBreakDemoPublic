@@ -27,6 +27,14 @@ else when #config(ON_SWITCH, false) {
         foreign import lib "lib/nx64/libfmod.a"
     }
 }
+else when ODIN_OS == .Linux {
+    //resolved at link time via -L (see the builder's linux build step), at run time via the SONAME-named .so next to the executable ($ORIGIN rpath)
+    when LOGGING_ENABLED {
+        foreign import lib "system:fmodL"
+    } else {
+        foreign import lib "system:fmod"
+    }
+}
 
 @(default_calling_convention = "c", link_prefix = "FMOD_")
 foreign lib {

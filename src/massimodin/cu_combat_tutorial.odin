@@ -24,7 +24,7 @@ combat_tutorial_fail_check :: proc(e:CombatEventDataHit, lostTo:string){
 			covers.editableDepthOffset = -30
 			covers.transform.z = -13
 
-			camera_tracking_set(pro.transform)
+			camera_tracking_set(pro._ptr)
 
 			dialogue_open(di.combatTutorial, "failure")
 		}, 60, TransitionKind.hardCut)
@@ -85,7 +85,7 @@ _cutscenes_reload_combat_tutorial :: proc(){
 			b := camera_pan_to_seq(pro.transform.pos+camera.tracking_offset)
 			if a && b{
 				entity_destroy(polema)
-				camera_tracking_set(pro.transform)
+				camera_tracking_set(pro)
 				cutscene_advance_dialogue()
 				return seq_close(.end)
 			}
@@ -146,7 +146,7 @@ _cutscenes_reload_combat_tutorial :: proc(){
 			a := scmove("polema", {{336, 412}})
 			b := cammove(pro.transform.pos+camera.tracking_offset)
 			if a&&b{
-				camera_tracking_set(pro.transform)
+				camera_tracking_set(pro)
 				cutscene_advance_dialogue()
 				return seq_close(.end)
 			}
@@ -343,12 +343,12 @@ _cutscenes_reload_combat_tutorial :: proc(){
 			if seq_cue(0){
 				ui_highlight(combatUnit_stage_rect(pro), true)
 				cutscene.enabled = false
-				combat.disable_next_turn_button = true
+				combat.disable_external_menus = true
 			}
 
 			if combat.selected_unit == pro{
 				ui_highlight()
-				combat.disable_next_turn_button = false
+				combat.disable_external_menus = false
 				proc_call_delayed(proc(){cutscene_advance_dialogue()}, 1)
 				return seq_close(.end)
 			}
@@ -435,20 +435,20 @@ _cutscenes_reload_combat_tutorial :: proc(){
 			if seq_cue(0){
 				ui_highlight(combatUnit_stage_rect(akro), true)
 				cutscene.enabled = false
-				combat.disable_next_turn_button = true
+				combat.disable_external_menus = true
 			}
 
 			if akro.actionPreviewPinned{
 				ui_highlight()
 				proc_call_delayed(proc(){cutscene_advance_dialogue()}, 1)
-				combat.disable_next_turn_button = false
+				combat.disable_external_menus = false
 				return seq_close(.end)
 			}
 
 			if combat.selected_unit != nil || combatUnit_find("pro").actionPreviewPinned{
 				ui_highlight()
 				proc_call_delayed(proc(){cutscene_advance_dialogue(label="akroTutorialSpurned")}, 1)
-				combat.disable_next_turn_button = false
+				combat.disable_external_menus = false
 				return seq_close(.end)
 			}
 		}
@@ -547,11 +547,11 @@ _cutscenes_reload_combat_tutorial :: proc(){
 
 	m["unblockCamera"] = proc()->bool{
 		cutscene.enabled = false
-		combat.disable_next_turn_button = true
+		combat.disable_external_menus = true
 		return true
 	}
 	m["unblockCameraEnd"] = proc()->bool{
-		combat.disable_next_turn_button = false
+		combat.disable_external_menus = false
 		return true
 	}
 
@@ -649,12 +649,12 @@ _cutscenes_reload_combat_tutorial :: proc(){
 	m["highlightTimelineAndUnblock"] = proc()->bool{
 		ui_highlight(rectf_make_points(0,92,133,177))
 		cutscene.enabled = false
-		combat.disable_next_turn_button = true
+		combat.disable_external_menus = true
 		return true
 	}
 	m["unhighlightTimeline"] = proc()->bool{
 		ui_highlight()
-		combat.disable_next_turn_button = false
+		combat.disable_external_menus = false
 		return true
 	}
 
@@ -863,7 +863,7 @@ _cutscenes_reload_combat_tutorial :: proc(){
 				scface(pro, .up)
 				akro := scmake("akro", {729, 280}, .up)
 				estring_set(&akro.stageEntity.group, "elevator")
-				camera_tracking_set(pro.transform)
+				camera_tracking_set(pro)
 				_entities_just_made_process()
 			}
 

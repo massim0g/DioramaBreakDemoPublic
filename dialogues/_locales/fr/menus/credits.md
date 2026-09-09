@@ -50,8 +50,7 @@ VSCode
 ---
 **Bibliothèques et ressources utilisées**
 Odin Programming Language
-OpenGL et GLSL
-SDL2
+SDL3
 FMOD Studio by Firelight Technologies Pty Ltd.
 Dear ImGui
 Tracy

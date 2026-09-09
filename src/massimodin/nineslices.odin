@@ -29,7 +29,7 @@ _nineslice_info_reload :: proc(){
 
 }
 
-nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_WHITE, alpha:f32=1, blendmode:=BlendMode.blend){
+nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_WHITE, alpha:f32=1){
 
 	padding:Vec2
 	tileEdges := true
@@ -46,13 +46,13 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 	//center
 	centerArea := rect_make(area.x + padding.x, area.y + padding.y, area.size.x - padding.x*2, area.size.y - padding.y*2)
 	centerPart := rect_make(padding.x, padding.y, sp.size.x - padding.x*2, sp.size.y - padding.y*2)
-	sprite_draw_part_ex(sp, centerArea, centerPart, frameIndex, color=color,alpha=alpha,blendmode=blendmode)
+	sprite_draw_part_ex(sp, centerArea, centerPart, frameIndex, color=color,alpha=alpha)
 
 	//corners
-	sprite_draw_part_ex(sp, Rect{{area.x, area.y}, padding}, 														rect_make(0,0,padding.x,padding.y), 									frameIndex, color=color,alpha=alpha,blendmode=blendmode) //top-left
-	sprite_draw_part_ex(sp, Rect{{rect_get_right(area)-padding.x+1, area.y}, padding}, 								rect_make(sp.size.x-padding.x,0,padding.x,padding.y), 					frameIndex, color=color,alpha=alpha,blendmode=blendmode) //top-right
-	sprite_draw_part_ex(sp, Rect{{area.x, rect_get_bottom(area)-padding.y+1}, padding}, 							rect_make(0,sp.size.y-padding.y,padding.x,padding.y), 					frameIndex, color=color,alpha=alpha,blendmode=blendmode) //bottom-left
-	sprite_draw_part_ex(sp, Rect{{rect_get_right(area)-padding.x+1, rect_get_bottom(area)-padding.y+1}, padding}, 	rect_make(sp.size.x-padding.x,sp.size.y-padding.y,padding.x,padding.y), frameIndex, color=color,alpha=alpha,blendmode=blendmode) //bottom-right
+	sprite_draw_part_ex(sp, Rect{{area.x, area.y}, padding}, 														rect_make(0,0,padding.x,padding.y), 									frameIndex, color=color,alpha=alpha) //top-left
+	sprite_draw_part_ex(sp, Rect{{rect_get_right(area)-padding.x+1, area.y}, padding}, 								rect_make(sp.size.x-padding.x,0,padding.x,padding.y), 					frameIndex, color=color,alpha=alpha) //top-right
+	sprite_draw_part_ex(sp, Rect{{area.x, rect_get_bottom(area)-padding.y+1}, padding}, 							rect_make(0,sp.size.y-padding.y,padding.x,padding.y), 					frameIndex, color=color,alpha=alpha) //bottom-left
+	sprite_draw_part_ex(sp, Rect{{rect_get_right(area)-padding.x+1, rect_get_bottom(area)-padding.y+1}, padding}, 	rect_make(sp.size.x-padding.x,sp.size.y-padding.y,padding.x,padding.y), frameIndex, color=color,alpha=alpha) //bottom-right
 
 	//edges
 	
@@ -69,7 +69,7 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 			edgeArea.size.y = min(end - edgeArea.y, edgeArea.size.y)
 			edgePart.size.y = edgeArea.size.y
 
-			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha,blendmode=blendmode)
+			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha)
 
 			edgeArea.y += edgeArea.size.y
 		}
@@ -81,7 +81,7 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 			edgeArea.size.y = min(end - edgeArea.y, edgeArea.size.y)
 			edgePart.size.y = edgeArea.size.y
 
-			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha,blendmode=blendmode)
+			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha)
 
 			edgeArea.y += edgeArea.size.y
 		}
@@ -94,7 +94,7 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 			edgeArea.size.x = min(end - edgeArea.x, edgeArea.size.x)
 			edgePart.size.x = edgeArea.size.x
 
-			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha,blendmode=blendmode)
+			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha)
 
 			edgeArea.x += edgeArea.size.x
 		}
@@ -106,7 +106,7 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 			edgeArea.size.x = min(end - edgeArea.x, edgeArea.size.x)
 			edgePart.size.x = edgeArea.size.x
 
-			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha,blendmode=blendmode)
+			sprite_draw_part_ex(sp, edgeArea, edgePart, frameIndex, color=color,alpha=alpha)
 
 			edgeArea.x += edgeArea.size.x
 		}
@@ -118,28 +118,28 @@ nineslice_draw :: proc(sp:^Sprite, area:Rect, frameIndex:=0, color:Color=COLOR_W
 		sprite_draw_part_ex(sp, 
 			rect_make(area.x, centerArea.y, padding.x, centerArea.size.y), 
 			rect_make(0, centerPart.y, padding.x, centerPart.size.y), 
-			frameIndex, color=color,alpha=alpha,blendmode=blendmode
+			frameIndex, color=color,alpha=alpha
 		) 
 
 		//right
 		sprite_draw_part_ex(sp, 
 			rect_make(centerArea.x + centerArea.size.x, centerArea.y, padding.x, centerArea.size.y), 
 			rect_make(centerPart.x + centerPart.size.x, centerPart.y, padding.x, centerPart.size.y), 
-			frameIndex, color=color,alpha=alpha,blendmode=blendmode
+			frameIndex, color=color,alpha=alpha
 		) 
 
 		//top
 		sprite_draw_part_ex(sp, 
 			rect_make(centerArea.x, area.y, centerArea.size.x, padding.y), 
 			rect_make(centerPart.x, 0, centerPart.size.x, padding.y), 
-			frameIndex, color=color,alpha=alpha,blendmode=blendmode
+			frameIndex, color=color,alpha=alpha
 		) 
 
 		//bottom
 		sprite_draw_part_ex(sp, 
 			rect_make(centerArea.x, centerArea.y + centerArea.size.y, centerArea.size.x, padding.y), 
 			rect_make(centerPart.x, centerPart.y + centerPart.size.y, centerPart.size.x, padding.y), 
-			frameIndex, color=color,alpha=alpha,blendmode=blendmode
+			frameIndex, color=color,alpha=alpha
 		) 
 		
 	}

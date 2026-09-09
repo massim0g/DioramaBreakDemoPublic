@@ -76,7 +76,7 @@ textEffect_set :: proc(using self:^TextEffect, text:string){
 
 	tex_resize(&tex, text_size(text, font)+(dropShadow!=nil?1:0))
 	tex_target_set(tex)
-	shader_set(shaders._base_shader) //prevent doubling-up shader effects
+	shader_set(Sh_Base) //prevent doubling-up shader effects
 		if col,ok := dropShadow.(Color); ok{
 			text_draw(text, 1, 0, col, font=font)
 			text_draw(text, 1, 1, col, font=font)

@@ -1,7 +1,5 @@
 package massimodin //@nested-tags:engine/visuals
 
-import "../sdl2"
-
 MAX_PARTICLE_TYPES :: 63
 ParticlesSystem :: struct{
 	_types_array:[MAX_PARTICLE_TYPES+1]ParticleType,
@@ -133,8 +131,8 @@ particle_type :: proc(
 	pt.dirSpread = dirSpread
 	pt.dirChange = dirChange
 	pt.dirChangeMatrix = {
-		cos(dirChange), sin(dirChange),
-		-sin(dirChange), cos(dirChange)
+		cos(dirChange), -sin(dirChange),
+		sin(dirChange), cos(dirChange)
 	}
 	pt.angleMatchesDir = angleMatchesDir 
 	pt.angleChange = angleMatchesDir ? dirChange : angleChange
@@ -186,7 +184,7 @@ particle_type_clone_type :: proc(pt:ParticleType) -> ^ParticleType{
 }
 particle_type_clone :: proc{particle_type_clone_sprite, particle_type_clone_type}
 
-//use depth=-INF to draw above the UI
+//particles at or above `layer_depth(.ui)` are drawn in screen space and exempt from the timestop freeze
 particles_emit :: proc(pt:^ParticleType, count:int, depth:f32, region:Rect){
 	if !(depth in particles._groups){
 		particles._groups[depth] = ParticleGroup{
@@ -283,7 +281,6 @@ particles_emit_circle :: proc(pt:^ParticleType, count:int, depth:f32, region:Cir
 
 particles_draw :: proc(parts:[]Particle){
 	//trace(format("Particles Draw: %s", parts[0].sprite.name))
-	camPosF := camera_pos()
 	for &p in parts{
 		//Optimized draw_sprite
 		spr := p.sprite
@@ -294,33 +291,25 @@ particles_draw :: proc(parts:[]Particle){
 		else do blend.rgb = color_lerp(p.type.colors[1], p.type.colors[2], (prog-0.5)*2)
 		blend.a = p.type.alphaCurve == nil ? 255 : u8(curve_eval(p.type.alphaCurve, prog)*255)
 
-		frame := spr.frames[p.frameInd]
+		frame := &spr.frames[p.frameInd]
 
 		scale:= Vec2{
 			p.type.scaleCurves.x == nil ? p.scale.x : p.scale.x*curve_eval(p.type.scaleCurves.x, prog), 
 			p.type.scaleCurves.y == nil ? p.scale.y : p.scale.y*curve_eval(p.type.scaleCurves.y, prog)
 		}
-		size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+		size := frame.texturePagePos.size
 		newSize := size*scale
 		sizeDelta := newSize - size
 
-		origin := Vec2{f32(spr.origin.x - frame.trimOffset.x), f32(spr.origin.y - frame.trimOffset.y)}
-		origin.x += size.x - origin.x*2 - 1
-		origin.y += size.y - origin.y*2 - 1
+		origin := spr.origin - frame.trimOffset
 
-		destRect := sdl2.FRect{
-			p.pos.x - origin.x - origin.x/size.x*sizeDelta.x - camPosF.x,
-			p.pos.y - origin.y - origin.y/size.y*sizeDelta.y - camPosF.y,
-			newSize.x,
-			newSize.y
-		}
-
-		pivot := sdl2.FPoint{origin.x*scale.x, origin.y*scale.y}
-		
-		sdl2.SetTextureColorMod(frame.texturePage, blend.r, blend.g, blend.b)
-		sdl2.SetTextureAlphaMod(frame.texturePage, blend.a)
-		sdl2.SetTextureBlendMode(frame.texturePage, .BLEND)
-		sdl2.RenderCopyExF(display._renderer, frame.texturePage, &frame.texturePagePos, &destRect, f64(p.angle), &pivot, sdl2.RendererFlip.NONE)
+		render_quad(frame.texturePage.texture, spriteFrame_sampler(frame), Quad{
+			worldRect = {p.pos - origin - origin/size*sizeDelta, newSize},
+			uvRect = spriteFrame_uv(frame, frame.texturePagePos),
+			pivot = {origin.x*scale.x, origin.y*scale.y},
+			rotation = angle_to_rads(-p.angle),
+			blend = blend,
+		})
 	}
 }
 
@@ -334,7 +323,8 @@ particles_clear_all :: proc(){
 _particles_system_update :: proc(){
 	toDelete := make([dynamic]f32, context.temp_allocator)
 	for key, &group in particles._groups{
-		if combat.time_stop_mode != .disabled && key != -INF do continue
+		//groups at or in front of the ui layer are screen-space overlay/ui effects: they keep updating while the world is time-stopped
+		if combat.time_stop_mode != .disabled && key > layer_depth(.ui) do continue
 		parts := &group.particles
 		#reverse for &p, i in parts{ //hot!
 			p.age += 1

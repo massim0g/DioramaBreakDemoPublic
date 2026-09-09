@@ -2,98 +2,7 @@
 package massimodin //@nested-tags:stages
 
 import "core:reflect"
-import "../sdl2"
-import gl "vendor:OpenGL"
-
-DepthListEntrySprite :: struct{
-	blendData:BlendData,
-	sprite:^Sprite,
-	pos:Vec2
-}
-DepthListEntryTex :: struct{
-	tex:Tex,
-	pos:Vec2,
-	alpha:f32
-}
-
-DepthListEntryParticles :: struct{
-	parts:[]Particle
-}
-
-DepthListEntryEntity :: struct{
-	base:^ComponentBase,
-	drawStep:int,
-	process:proc(base: ^ComponentBase, event: Event, overrideDisabled:=false),
-	ev:Event
-}
-
-DepthListEntryPreciseDepthEntity :: struct{
-	ent:^StageEntity,
-	segmentInd:int
-}
-
-DepthListEntryTiles :: struct{
-	tileset:^Tileset,
-	pos:Vec2,
-	tileData:[]TileLayerTile,
-	w:int,
-	h:int,
-	blendData:BlendData
-}
-
-DepthListEntryTint :: struct{
-	using tintData:TintData,
-	gradientRect:Rect,
-	clampGradient:bool
-}
-
-DepthListEntryShader :: struct{
-	s:Shader,
-	reset:bool
-}
-
-DepthListEntryDepthWidget :: struct{
-	top:Vec2,
-	bottom:Vec2
-}
-
-
-DepthListEntryProc :: struct{
-	c:proc()
-}
-
-DepthListEntryEditCursor :: struct{}
-
-DepthListEntryPoint :: struct{
-	pos:Vec2,
-	blendData:BlendData
-}
-DepthListEntryLine :: struct{
-	l:Line,
-	blendData:BlendData
-}
-
-//some larger uncommon variants are passed as pointers to keep the size of the union below 32 bytes
-DepthListEntry :: union{
-	DepthListEntryEntity,
-	DepthListEntryPreciseDepthEntity,
-	^DepthListEntryTiles,
-	DepthListEntryEditCursor,
-	DepthListEntrySprite,
-	DepthListEntryPoint,
-	DepthListEntryLine,
-	DepthListEntryTex,
-	DepthListEntryParticles,
-	DepthListEntryProc,
-	^DepthListEntryTint,
-	DepthListEntryShader,
-	DepthListEntryDepthWidget,
-	^SequenceDeferredDraw
-}
-DepthListRef :: struct{
-	depth:f32,
-	ind:u16
-}
+import "../sdl3"
 
 DropShadow :: struct{
 	shape:union{Ellipse, Rect},
@@ -101,50 +10,38 @@ DropShadow :: struct{
 	alpha:f32
 }
 
-stage_shader_uniforms_set :: proc(self:^StageEntity){
-	using self
-	if depthKind != .floor && receivesVerticalShadow && !stage_edit.enabled{
-		shader_uniform_set(sh.stage, "verticalShading", true)
-		
-		frame := &spriter.mySprite.frames[spriter.lastFrame]
-		shader_uniform_set(sh.stage, "tpPos", sdl_rect_to_rect(frame.texturePagePos)); 
-		// tpw,tph:i32
-		// sdl2.QueryTexture(frame.texturePage.texture, nil, nil, &tpw, &tph)
-		//shader_uniform_set(sh.stage, "tpSize", Vec2{f32(tpw), f32(tph)});
-		//shader_uniform_set(sh.stage, "baseZ", transform.z);
-		shader_uniform_set(sh.stage, "feetPos", transform.pos)
-	}
-}
-
-stage_shader_uniforms_reset :: proc(self:^StageEntity){
-	if self.depthKind != .floor && self.receivesVerticalShadow && !stage_edit.enabled do shader_uniform_set(sh.stage, "verticalShading", false)
-}
-
-_stage_render :: proc(){ //handles depth-sorted rendering for the stage
+_stage_render :: proc(){ //records the stage's draws, layered through the renderer's depth spans
 	tracy_auto_trace = false
 	defer tracy_auto_trace = true
-	//trace("Stage Render")
-	//todo: static stage elements should be sorted into depth list only once, on stage load
-	
-	stage.render_depth_list = make([dynamic]DepthListEntry, 0, 2048, context.temp_allocator)
-	stage.render_depth_list_sorted_refs = make([dynamic]DepthListRef, 0, 2048, context.temp_allocator)
 
-	entryAppend :: proc(depth:f32, entry:DepthListEntry){
-		append(&stage.render_depth_list_sorted_refs, DepthListRef{depth, u16(len(stage.render_depth_list))})
-		append(&stage.render_depth_list, entry)
+	if stage_edit.enabled do tex_target_set(stage_edit.draw_tex, stage_camera_pos(), false)
+	else do camera_set(stage.camera_pos)
+
+	draw_clear(stage.backgroundColor)
+
+	if !stage_edit.enabled{
+		shader_set(Sh_Stage{
+			stageRect = transmute([4]f32)(stage.bounds),
+			shadowBlend = blend_to_f(stage.shadowBlend),
+			lightBlend = blend_to_f(stage.lightBlend),
+			timeStopSaturation = combat.time_stop_saturation,
+		})
+		shader_texture_bind("shadowMap", stage.shadow_map)
 	}
 
 	//ENTITIES
 
-	//precise-depth stage entity and culling and shadows
+	//stage entity draws
 	camRect := stage_camera_rect()
+	camRect.size += {1,1} //the world tex has a pixel of overdraw for the smooth camera
 	stageEntities := coall(StageEntity)
 	{
 		trace("Stage Entity Cull and Shadows")
 
+		//culling and shadows
 		clear(&stage.drop_shadows)
 		tex_target_set(stage.shadow_map, stage.bounds.pos, true)
-		shader_set(sh.colorOnly)
+		shader_set(Sh_ColorOnly)
 		for &ent in stageEntities{
 			using ent
 			if !componentsVisible do continue
@@ -160,22 +57,11 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 				if !visible do continue
 			}
 	
-			if depthKind == .precise{ 
-				baseDepth := -ent.transform.y + ent.editableDepthOffset
-				for segment,i in ent.preciseDepthSegments{ //hot!
-					
-					entryAppend(
-						baseDepth + segment.internalDepthOffset,
-						DepthListEntryPreciseDepthEntity{&ent, i}
-					)
-				}
-			}
-			
 			switch shadowKind{
 				case .none: //do nothing
 				case .isShadow, .isLight:
 					if invertShadowMargin > 0{
-						shader_set(shaders._base_shader)
+						shader_set(Sh_Base)
 						drawRect := stageEntity_draw_rect(&ent)
 						texSize := Vec2i(drawRect.size)
 						if invertShadowTex.size != texSize do tex_resize(&invertShadowTex, texSize)
@@ -185,10 +71,12 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 							center := drawRect.size/2
 							originAdjusted := -spriteOrigin + drawRect.size
 							edgeEllipse := Ellipse{radii=drawRect.size}
+							blendmode_set(.subtract)
 							for a:f32=0;a<360;a+=360/8{
 								edgePoint := ellipse_edge_point(edgeEllipse, a)
-								sprite_draw_ex(spriter.mySprite, originAdjusted + vec2_normalize(edgePoint)*(vec2_mag_get(edgePoint)-invertShadowMargin), spriter.lastFrame, blendmode=BlendMode.subtract)
+								sprite_draw_ex(spriter.mySprite, originAdjusted + vec2_normalize(edgePoint)*(vec2_mag_get(edgePoint)-invertShadowMargin), spriter.lastFrame)
 							}
+							blendmode_set(.blend)
 						tex_target_reset()
 						shader_reset()
 						tex_draw(invertShadowTex, drawRect.pos)
@@ -224,22 +112,32 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 		}
 		tex_target_reset(2)
 
-		entryAppend(
-			DEPTH_MAX-102,
-			DepthListEntryProc{proc(){
-				destination := display_main_tex_inactive()
-				shader_set(sh.shadowLayer)
-				shader_texture_bind(sh.shadowLayer, "destination", destination)
-				defer shader_texture_unbind(destination)
-				shader_uniform_set(sh.shadowLayer, "shadowBlend", stage.shadowBlend)
-				shader_uniform_set(sh.shadowLayer, "lightBlend", stage.lightBlend)
-				tex_draw_ex(stage.shadow_layer, stage_camera_pos())
-				shader_reset()
-			}}
-		)
+		//composite the shadow layer over the floor
+		render_depth_layer(.stageBG, -102)
+		destination := display_snapshot()
+		shader_set(Sh_ShadowLayer{
+			shadowBlend = blend_to_f(stage.shadowBlend),
+			lightBlend = blend_to_f(stage.lightBlend),
+		})
+		shader_texture_bind("destination", destination)
+		tex_draw_ex(stage.shadow_layer, stage_camera_pos())
+		shader_reset()
 	}
 
-	addEntityDraws :: proc(ev:Event, internalDepthOffset:f32=0){
+	/*
+	Timestop desaturation: redraw the screen so far (the floor bands) through the stage shader with the effect on, then leave timeStopEffect set so everything drawn in front desaturates per draw.
+	Param edits apply to the stage shader in replay order, so the effect covers exactly the depth range between this span and wherever combat_shader_set(false) lands.
+	*/
+	if combat.time_stop_mode == .enabledWithEffect{
+		render_depth_layer(.stageBG, -103)
+		combat_shader_set(true)
+		display_redraw()
+	}
+
+	_stageEntities_bulk_draw()
+
+	//entity RenderComponent draws, each at its own depth
+	entitiesDraw :: proc(ev:Event, depthOffset:f32){
 		for componentType in entities.component_type_event_register[ev]{
 			metadata := &entities.component_type_metadata[componentType]
 			arr := metadata.get_array_pointer()
@@ -250,38 +148,75 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 
 			for ptr:=basePtr; ptr<basePtr+size*arrLen; ptr+=size{
 				renderPtr := cast(^RenderComponentBase)ptr
-				if(renderPtr.visible && renderPtr.depth != nil){
-					switch depth in renderPtr.depth{
-						case f32:
-							entryAppend(
-								depth+internalDepthOffset,
-								DepthListEntryEntity{cast(^ComponentBase)ptr, 0, process, ev}
-							)
-						case []f32:
-							for d, i in depth{
-								entryAppend(
-									d+internalDepthOffset,
-									DepthListEntryEntity{cast(^ComponentBase)ptr, i, process, ev}
-								)
-							}
-					}
+				if renderPtr.visible{
+					render_depth(renderPtr.depth + depthOffset)
+					process(cast(^ComponentBase)ptr, ev)
 				}
 			}
 		}
 	}
-	addEntityDraws(.draw)
-	
+	entitiesDraw(.draw, 0)
 
 	//PARTICLES
 	for depth, group in particles._groups{
-		if depth == -INF do continue
-		entryAppend(
-			depth,
-			DepthListEntryParticles{group.particles[:]}
-		)
+		render_depth(depth)
+		if depth <= layer_depth(.ui) do camera_set(0)
+		particles_draw(group.particles[:])
+		if depth <= layer_depth(.ui) do camera_reset()
 	}
 
 	//LAYERS
+	layerTilesDraw :: proc(tileset:^Tileset, pos:Vec2, tileData:[]TileLayerTile, w:int, blendData:BlendData){
+		tileSize := cast([2]i32)tileset.tileSize
+		gridW := tileset.sprite.size.x/f32(tileSize.x)
+
+		sprite := tileset.sprite
+		frame := sprite.frames[sprite_frame_get(sprite)]
+		tPage := frame.texturePage
+		tPagePos := frame.texturePagePos.pos
+		drawPos := round(pos)
+		srcRect := Rect{{0, 0}, {f32(tileSize.x), f32(tileSize.y)}}
+		dstRect := srcRect
+
+		areaW := i32(w) //in tiles
+		areaH := i32(len(tileData)/w)
+
+		tileBlend := color_to_blend(blendData.color, blendData.alpha)
+		tileSampler := spriteFrame_sampler(&frame)
+		blendmode_set(blendData.blendmode)
+
+		i := 0
+		for y in 0..<areaH{
+			for x in 0..<areaW{
+				tile := tileData[i]
+				if(tile.ind != 0){
+					tileInd := i32(tile.ind-1)
+
+					srcRect.x = tPagePos.x + f32((tileInd%i32(gridW))*tileSize.x)
+					srcRect.y = tPagePos.y + f32(i32(floor(f32(tileInd)/gridW))*tileSize.y)
+					dstRect.x = drawPos.x + f32(tileSize.x*x)
+					dstRect.y = drawPos.y + f32(tileSize.y*y)
+
+					flipMode := sdl3.FlipMode(tile.flip%3)
+					flags:QuadFlags
+					if flipMode == .HORIZONTAL do flags += {.flipX}
+					if flipMode == .VERTICAL do flags += {.flipY}
+
+					render_quad(tPage.texture, tileSampler, Quad{
+						worldRect = dstRect,
+						uvRect = texture_page_uv(tPage, srcRect),
+						rotation = angle_to_rads(f32(tile.angle) + ((tile.flip == 3) ? 180 : 0)),
+						pivot = dstRect.size/2,
+						blend = tileBlend,
+						flags = flags,
+					})
+				}
+				i+=1
+			}
+		}
+		blendmode_set(.blend)
+	}
+
 	for &layer in stage.layers{
 		if !layer.visible do continue
 		switch variant in layer.variant{
@@ -290,17 +225,17 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 				offset:=layer.offset
 				depth:f32
 				switch layer.depthKind{
-					case .floor: depth = DEPTH_MAX+layer.z
-					case .foreground: 
-						depth = -DEPTH_MAX+layer.z
+					case .floor: depth = layer_depth(.stageBG)+layer.z
+					case .foreground:
+						depth = layer_depth(.stageFG)+layer.z
 					case .wall:
 						depth = -offset.y
 						offset.y += ceil(layer.z)
 				}
-				entryAppend(
-					depth,
-					DepthListEntrySprite{layer.blendData, variant.sprite, offset + stage.camera_pos*variant.parallax}
-				)
+				render_depth(depth)
+				blendmode_set(layer.blendData.blendmode)
+				sprite_draw_ex(variant.sprite, offset + stage.camera_pos*variant.parallax, color=layer.blendData.color, alpha=layer.blendData.alpha)
+				blendmode_set(.blend)
 			case StageLayerTiles:
 				tileset := variant.tileset
 				if(tileset == nil) do continue
@@ -310,103 +245,85 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 					gridH := f32(tileset.tileSize.y)
 					depth := -drawPos.y-gridH
 					for i in 0..<variant.tileData.h{
-						entry := new(DepthListEntryTiles, context.temp_allocator)
-						entry^ = {
-							tileset, drawPos,
-							grid_slice_row(variant.tileData, i), variant.tileData.w, 1, layer.blendData
-						} 
-						entryAppend(depth, entry)
+						render_depth(depth)
+						layerTilesDraw(tileset, drawPos, grid_slice_row(variant.tileData, i), variant.tileData.w, layer.blendData)
 						drawPos.y += gridH
 						depth -= gridH
 					}
 				}
 				else{
-					entry := new(DepthListEntryTiles, context.temp_allocator)
-					entry^ = {
-						tileset, drawPos,
-						variant.tileData.buf[:], variant.tileData.w, variant.tileData.h, layer.blendData
-					} 
-					entryAppend(
-						layer.z + (layer.depthKind == .foreground ? -DEPTH_MAX + 1 : DEPTH_MAX - 1),
-						entry
-					)
+					render_depth(layer.z + (layer.depthKind == .foreground ? layer_depth(.stageFG) + 1 : layer_depth(.stageBG) - 1))
+					layerTilesDraw(tileset, drawPos, variant.tileData.buf[:], variant.tileData.w, layer.blendData)
 				}
 			case StageLayerTint:
-				entry := new(DepthListEntryTint, context.temp_allocator)
-				entry^ = {
-					variant.tintData,
-					stage.bounds,
-					false
-				}
+				gradientRect := stage.bounds
+				clampGradient := false
 				depth:f32
 				switch layer.depthKind{
-					case .foreground: depth = -DEPTH_MAX+layer.z
-					case .floor: depth = DEPTH_MAX+layer.z
-					case .wall: 
+					case .foreground: depth = layer_depth(.stageFG)+layer.z
+					case .floor: depth = layer_depth(.stageBG)+layer.z
+					case .wall:
 						depth = -layer.offset.y
-						rect_set_bottom(&entry.gradientRect, layer.offset.y + layer.z, true)
-						entry.clampGradient = true
+						rect_set_bottom(&gradientRect, layer.offset.y + layer.z, true)
+						clampGradient = true
 				}
-				entryAppend(depth, entry)
+				render_depth(depth)
+				tp := Sh_StageTint{
+					viewRect = transmute([4]f32)(stage_camera_rect()),
+					viewportSize = stage_edit.enabled ? DISPLAY_SIZE/stage_edit.zoom : DISPLAY_SIZE,
+					tintMode = i32(variant.tintData.tintMode),
+					gradientRect = transmute([4]f32)(gradientRect),
+					clampGradient = i32(clampGradient),
+				}
+				for b,c in variant.tintData.tint do tp.colors[c] = blend_to_f(b)
+				shader_set(tp)
+				display_redraw()
+				shader_reset()
 			case StageLayerShader:
-				if variant.shader != 0 && layer.z > variant.resetZ{
+				if variant.shader != nil && layer.z > variant.resetZ{
 					baseDepth:f32
 					switch layer.depthKind{
-						case .floor: baseDepth = DEPTH_MAX
-						case .foreground: baseDepth = -DEPTH_MAX
+						case .floor: baseDepth = layer_depth(.stageBG)
+						case .foreground: baseDepth = layer_depth(.stageFG)
 						case .wall: baseDepth = 0
 					}
-					
-					entryAppend(layer.z + baseDepth, DepthListEntryShader{variant.shader, false})
-					entryAppend(variant.resetZ + baseDepth, DepthListEntryShader{0, true})
+
+					//the shader applies to the whole depth range between the set and the reset, via the renderer's sorted state flow
+					render_depth(layer.z + baseDepth)
+					shader_set(variant.shader._renderParams)
+					switch variant.shader.name{
+						case "shimmer": shader_params_set(Sh_Shimmer{f32(time.frame)})
+						case "wavy": shader_params_set(Sh_Wavy{f32(time.frame)})
+					}
+					render_depth(variant.resetZ + baseDepth)
+					shader_reset()
 				}
 		}
 	}
 
 	//UI
 	#partial switch combat.phase{ case .planning, .resolving:
-		entryAppend(
-			DEPTH_MAX-104,
-			DepthListEntryProc{_combat_grid_draw}
-		)
-		entryAppend(
-			-DEPTH_MAX,
-			DepthListEntryProc{_combat_action_target_silhouettes_draw}
-		)
+		render_depth_layer(.stageBG, -104)
+		_combat_grid_draw()
+		render_depth_layer(.stageTop, 1)
+		_combat_action_target_silhouettes_draw()
 
-		if combat.phase == .planning do _combat_aim_indicators_append(entryAppend)
-	}
-	
-
-	if combat.time_stop_mode == .enabledWithEffect{
-		entryAppend(
-			DEPTH_MAX-103,
-			DepthListEntryProc{
-				proc(){
-					combat_shader_set(true)
-					display_redraw()
-				}
-			}
-		)
-	}
-
-	//SEQUENCE DRAWS
-	for &dd in seq._deferred_draws{
-		if dd.depth != -INF do entryAppend(dd.depth, &dd)
+		if combat.phase == .planning do _combat_aim_indicators_draw()
 	}
 
 	//STAGE EDITOR
 	if(stage_edit.enabled){
 		if(stage_edit.cursor_contents != nil){
 			#partial switch contents in stage_edit.cursor_contents{
-				case ^Sprite, ^EntityPrefab:
-					entryAppend(
-						-stage_edit.cursor_coords.y,
-						DepthListEntryEditCursor{}
-					)
+				case ^EntityPrefab:
+					render_depth(-stage_edit.cursor_coords.y)
+					sprite_draw_ex(contents.previewSprite, stage_edit.cursor_coords.pos, color=COLOR_WHITE, alpha=0.5)
+				case ^Sprite:
+					render_depth(-stage_edit.cursor_coords.y)
+					sprite_draw_ex(contents, stage_edit.cursor_coords.pos, color=COLOR_WHITE, alpha=0.5)
 				case ^Mesh:
-					entryAppend(
-						-DEPTH_MAX, DepthListEntryProc{proc(){
+					render_depth_layer(.stageTop, 1)
+					{
 							meshPtr := stage_edit.cursor_contents.(^Mesh)
 							mesh := meshPtr^
 							
@@ -419,41 +336,35 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 
 							nearestPoint, nearestPointEdgeInd, nearestVertexInd := mesh_nearest_point(mesh, stage_edit.cursor_coords.pos)
 
-							draw_rect(Rect{stage_camera_pos(), window_size()}, COLOR_BLACK, 0.5)
+							draw_rect(stage_camera_rect(), COLOR_BLACK, 0.5)
 							edgeCount := len(mesh.edges)
 							if edgeCount > 0{
-								draw_color(edgeColor)
 								edges := drawingNewEdge ? mesh.edges[:edgeCount-1] : mesh.edges[:]
 								for edge in edges{
-									draw_line(mesh_edge_to_line(mesh, edge))
+									draw_line(mesh_edge_to_line(mesh, edge), color=edgeColor)
 								}
 	
 								if drawingNewEdge{
-									draw_color(edgeColor, 127)
-									draw_line(mesh.vertices[newEdge[0]], stage_edit.cursor_coords.pos)
+									draw_line(mesh.vertices[newEdge[0]], stage_edit.cursor_coords.pos, color=edgeColor, alpha=0.5)
 								}
 							}
 							
-							draw_color(vertexColor)
 							for vertex, i in mesh.vertices{
-								draw_circle(vertex, STAGE_EDIT_MESH_HOVER_RANGE/2)
+								draw_circle(vertex, STAGE_EDIT_MESH_HOVER_RANGE/2, vertexColor)
 							}
 
 							if noSelection{
 								if key_mods_held({.CTRL}){ 
 									if nearestVertexInd != -1 && vec2_distance(mesh.vertices[nearestVertexInd], stage_edit.cursor_coords.pos) < STAGE_EDIT_MESH_HOVER_RANGE{
-										draw_color(edgeColor, 127)
-										draw_circle(mesh.vertices[nearestVertexInd], STAGE_EDIT_MESH_HOVER_RANGE)
+										draw_circle(mesh.vertices[nearestVertexInd], STAGE_EDIT_MESH_HOVER_RANGE, edgeColor, 0.5)
 									}
 									else{ 
-										draw_color(vertexColor, 127)
-										draw_circle(stage_edit.cursor_coords.pos, STAGE_EDIT_MESH_HOVER_RANGE/2)
+										draw_circle(stage_edit.cursor_coords.pos, STAGE_EDIT_MESH_HOVER_RANGE/2, vertexColor, 0.5)
 									}
 								}
 								else{ 
 									if nearestVertexInd == -1{
-										draw_color(vertexColor, 127)
-										draw_circle(stage_edit.cursor_coords.pos, STAGE_EDIT_MESH_HOVER_RANGE/2)
+										draw_circle(stage_edit.cursor_coords.pos, STAGE_EDIT_MESH_HOVER_RANGE/2, vertexColor, 0.5)
 									}
 									else{
 										nearestVert := &mesh.vertices[nearestVertexInd]
@@ -461,250 +372,61 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 											draw_circle(nearestVert^, STAGE_EDIT_MESH_HOVER_RANGE)
 										}
 										else if nearestPointEdgeInd != -1 && vec2_distance(nearestPoint, stage_edit.cursor_coords.pos) < STAGE_EDIT_MESH_HOVER_RANGE{
-											draw_color(vertexColor, 127)
-											draw_circle(nearestPoint, STAGE_EDIT_MESH_HOVER_RANGE/2)
+											draw_circle(nearestPoint, STAGE_EDIT_MESH_HOVER_RANGE/2, vertexColor, 0.5)
 										}
 										else{
 											newPos := stage_edit.cursor_coords.pos
 											if key_mods_held({.SHIFT}) && !stage_edit.grid_entity_snap do newPos = vec2_snap_to_angle(newPos, nearestVert^)
-											draw_color(edgeColor, 127)
-											draw_line(nearestVert^, newPos)
-											draw_color(vertexColor, 127)
-											draw_circle(newPos, STAGE_EDIT_MESH_HOVER_RANGE/2)
+											draw_line(nearestVert^, newPos, color=edgeColor, alpha=0.5)
+											draw_circle(newPos, STAGE_EDIT_MESH_HOVER_RANGE/2, vertexColor, 0.5)
 										}
 									}
 								}
 							}
-
-						}}
-					)
+					}
 			}
 		}
 
+		depthWidgetDraw :: proc(top:Vec2, bottom:Vec2){
+			draw_line(top, bottom, color=COLOR_GREEN, alpha=0.5)
+			draw_circle(bottom, 2, COLOR_GREEN, 0.5)
+		}
+
 		if stage_edit.reference_tex.ptr != nil{
-			// entryAppend(
-			// 	DEPTH_MAX+1, DepthListEntryTex{stage_edit.reference_tex, Vec2(stage_edit.reference_offset), 1}
-			// })
-			entryAppend(
-				DEPTH_MAX+1, DepthListEntryProc{proc(){
-					tex_draw_ex(stage_edit.reference_tex, Vec2(stage_edit.reference_offset), color=color_lerp(stage.backgroundColor, COLOR_WHITE, 0.5))
-				}}
-			)
+			render_depth_layer(.stageBG, 1)
+			tex_draw_ex(stage_edit.reference_tex, Vec2(stage_edit.reference_offset), color=color_lerp(stage.backgroundColor, COLOR_WHITE, 0.5))
 		}
 
 		//stage bounds
-		entryAppend(
-			-DEPTH_MAX-1, DepthListEntryProc{proc(){
-				draw_rect_outline(stage.bounds, COLOR_WHITE, 0.5, 2)
-			}}
-		)
+		render_depth_layer(.stageTop, -1)
+		draw_rect_outline(stage.bounds, 2, COLOR_WHITE, 0.5)
 
 		//depth widgets
 		if layer, ok := stage_edit.cursor_contents.(^StageLayer); ok && layer.z < 0 && layer.depthKind == .wall{
 			if variant, ok2 := layer.variant.(StageLayerImage); ok2{
 				offset := layer.offset
 				parallaxAddend := stage.camera_pos*variant.parallax
-				entryAppend(
-					-offset.y+0.1,
-					DepthListEntryDepthWidget{Vec2{offset.x, offset.y + ceil(layer.z)} + parallaxAddend, offset + parallaxAddend}
-				)
+				render_depth(-offset.y+0.1)
+				depthWidgetDraw(Vec2{offset.x, offset.y + ceil(layer.z)} + parallaxAddend, offset + parallaxAddend)
 			}
 		}
 
 		if entRef,ok := stage_edit.cursor_contents.(CoRefEx(StageEntity)); ok{
 			ent := coget(entRef)
 			if ent.transform.z < 0{
-				depth:f32
-				switch d in ent.depth{
-					case f32: depth = d
-					case []f32: depth = d[0]
-				}
-				entryAppend(
-					depth+0.1,
-					DepthListEntryDepthWidget{stageEntity_draw_pos(ent), ent.transform.pos}
-				)
+				render_depth(ent.depth+0.1)
+				depthWidgetDraw(stageEntity_draw_pos(ent), ent.transform.pos)
 			}
 		}
 
 		//entity extra draws
-		addEntityDraws(.drawEditor, -0.01)
-		
-		tex_target_set(texBuffer_active_tex(stage_edit.draw_textures), stage_camera_pos(), false)
-	}
-	else do camera_set(stage.camera_pos)
+		entitiesDraw(.drawEditor, -0.01)
 
-	draw_clear(stage.backgroundColor)
+		//top-level UI
+		render_depth_ui(.stageEditor)
 
-	//SORT LIST
-	{
-		trace("Depth list sort")
-		sort(&stage.render_depth_list_sorted_refs, proc(a,b:DepthListRef)->bool{
-			if a.depth != b.depth do return a.depth > b.depth
-			return a.ind < b.ind //deterministic tiebreaker to mitigate z-fighting issues
-		})
-		
-	}
+		_colliders_debug_draw()
 
-	//SET STAGE SHADER UNIFORMS
-	if !stage_edit.enabled{
-		shader_set(sh.stage)
-		shader_texture_bind(sh.stage, "shadowMap", stage.shadow_map)
-		shader_uniform_set(sh.stage, "stageRect", stage.bounds)
-		shader_uniform_set(sh.stage, "shadowBlend", stage.shadowBlend)
-		shader_uniform_set(sh.stage, "lightBlend", stage.lightBlend)
-		shader_uniform_set(sh.stage, "verticalShading", false)
-		shader_uniform_set(sh.stage, "timeStopEffect", false)
-		shader_uniform_set(sh.stage, "timeStopSaturation", combat.time_stop_saturation)
-	}
-	defer if !stage_edit.enabled{shader_texture_unbind(stage.shadow_map)}
-
-	//DRAW
-	camPosF := Vec2(camera.pos)
-	for ref in stage.render_depth_list_sorted_refs{
-		switch variant in &stage.render_depth_list[ref.ind]{
-			case DepthListEntryEntity:
-				entities.draw_step = variant.drawStep
-				variant.process(variant.base, variant.ev)
-
-			case DepthListEntryPreciseDepthEntity: //hot!
-				segment := &variant.ent.preciseDepthSegments[variant.segmentInd]
-				dstRect := segment.dstRect
-				dstOffset := variant.ent.internalDepthOffset.([2]i32) - camera.pos
-				dstRect.x += dstOffset.x
-				dstRect.y += dstOffset.y
-				sdl2.RenderCopyEx(display._renderer, 
-					variant.ent.preciseDepthTexturePage,
-					&segment.srcRect,
-					&dstRect,
-					0, nil, variant.ent.transform.scale.x < 0? .HORIZONTAL : .NONE
-				)
-
-			case ^DepthListEntryTiles:
-				tileSize := cast([2]i32)variant.tileset.tileSize
-				gridW := variant.tileset.sprite.size.x/f32(tileSize.x)
-				
-				sprite := variant.tileset.sprite
-				frame := sprite.frames[sprite_frame_get(sprite)]
-				tPage := frame.texturePage
-				tPageX := frame.texturePagePos.x
-				tPageY := frame.texturePagePos.y
-				drawPos := cast([2]i32)round(variant.pos) - camera.pos
-				srcRect := sdl2.Rect{0, 0, tileSize.x, tileSize.y}
-				dstRect := srcRect
-
-				areaW := i32(variant.w) //in tiles
-				areaH := i32(variant.h)
-
-				sdl2.SetTextureColorMod(tPage, variant.blendData.color.r, variant.blendData.color.g, variant.blendData.color.b)
-				sdl2.SetTextureAlphaMod(tPage, u8(variant.blendData.alpha*255))
-				sdl2.SetTextureBlendMode(tPage, display.custom_blendmodes[variant.blendData.blendmode])
-
-				i := 0
-				for y in 0..<areaH{
-					for x in 0..<areaW{
-						tile := variant.tileData[i]
-						if(tile.ind != 0){
-							tileInd := i32(tile.ind-1)
-
-							srcRect.x = tPageX + (tileInd%i32(gridW))*tileSize.x
-							srcRect.y = tPageY + i32(floor(f32(tileInd)/gridW))*tileSize.y
-							dstRect.x = drawPos.x + tileSize.x*x
-							dstRect.y = drawPos.y + tileSize.y*y
-
-							sdl2.RenderCopyEx(
-								display._renderer, tPage, &srcRect, &dstRect, 
-								tile.angle + ((tile.flip == 3) ? 180 : 0), nil, sdl2.RendererFlip(tile.flip%3)
-							)
-						}
-						i+=1
-					}
-				}
-
-			case DepthListEntrySprite:
-				sprite_draw_ex(variant.sprite, variant.pos, color=variant.blendData.color, alpha=variant.blendData.alpha, blendmode=variant.blendData.blendmode)
-			case DepthListEntryPoint:
-				sprite_draw_ex(sp.white1, variant.pos, color=variant.blendData.color, alpha=variant.blendData.alpha, blendmode=variant.blendData.blendmode)
-			case DepthListEntryLine:
-				//software rendered to not mess up GL state
-				//todo: move to dedicated draw_line_software procs
-				x0 := i32(variant.l[0].x)
-				y0 := i32(variant.l[0].y)
-				x1 := i32(variant.l[1].x)
-				y1 := i32(variant.l[1].y)
-				dx := abs(x1 - x0)
-				dy := -abs(y1 - y0)
-				sx :i32 = x0 < x1 ? 1 : -1
-				sy :i32 = y0 < y1 ? 1 : -1
-				err := dx + dy
-				src := sdl2.Rect{0,0,1,1}
-				sdl2.SetTextureColorMod(shaders.blank_tex, variant.blendData.color.r, variant.blendData.color.g, variant.blendData.color.b)
-				sdl2.SetTextureAlphaMod(shaders.blank_tex, u8(clamp(variant.blendData.alpha*255, 0, 255)))
-				sdl2.SetTextureBlendMode(shaders.blank_tex, display.custom_blendmodes[variant.blendData.blendmode])
-				for {
-					dst := sdl2.Rect{x0-camera.pos.x,y0-camera.pos.y, 1, 1}
-					sdl2.RenderCopy(display._renderer, shaders.blank_tex, &src, &dst)
-					if x0 == x1 && y0 == y1 do break
-					e2 := 2 * err
-					if e2 >= dy { err += dy; x0 += sx }
-					if e2 <= dx { err += dx; y0 += sy }
-				}
-			case DepthListEntryTex:
-				tex_draw_ex(variant.tex, variant.pos, alpha=variant.alpha)
-			case ^DepthListEntryTint:
-				shader_set(sh.stageTint)
-				cols:[16]f32
-				n:=0
-				for b in variant.tint{
-					for cv in b{
-						cols[n] = f32(cv)/255
-						n+=1
-					}
-				}
-				gl.Uniform4fv(shader_uniform_loc(sh.stageTint, "colors"), 4, raw_data(&cols))
-				shader_uniform_set(sh.stageTint, "viewRect", stage_camera_rect())
-				shader_uniform_set(sh.stageTint, "viewportSize", stage_edit.enabled ? DISPLAY_SIZE/stage_edit.zoom : DISPLAY_SIZE)
-				shader_uniform_set(sh.stageTint, "tintMode", i32(variant.tintMode))
-				shader_uniform_set(sh.stageTint, "gradientRect", variant.gradientRect)
-				shader_uniform_set(sh.stageTint, "clampGradient", variant.clampGradient)
-				display_redraw()
-				shader_reset()
-			case DepthListEntryShader:
-				if variant.reset do shader_reset()
-				else{
-					shader_set(variant.s)
-
-					//set uniforms
-					switch variant.s{
-						case sh.shimmer:
-							shader_uniform_set(variant.s, "time", f32(time.frame))
-					}
-				}
-			case DepthListEntryEditCursor:
-				#partial switch contents in stage_edit.cursor_contents{
-					case ^EntityPrefab:
-						sprite_draw_ex(contents.previewSprite, stage_edit.cursor_coords.pos, color=COLOR_WHITE, alpha=0.5)
-					case ^Sprite:
-						sprite_draw_ex(contents, stage_edit.cursor_coords.pos, color=COLOR_WHITE, alpha=0.5)
-					
-				}
-			case DepthListEntryParticles:
-				particles_draw(variant.parts)
-			case DepthListEntryProc: variant.c()
-			case DepthListEntryDepthWidget:
-				draw_color(COLOR_GREEN, 127)
-				draw_line(variant.top, variant.bottom)
-				draw_circle(variant.bottom, 2)
-			case ^SequenceDeferredDraw:
-				append(&seq.context_seq_stack, variant.contextSeq)
-				if !variant.useStageCameraPos do camera_set(Vec2{})
-				callback_call(variant.callback)
-				if !variant.useStageCameraPos do camera_reset()
-				pop(&seq.context_seq_stack)
-		}
-	}
-	if !stage_edit.enabled do shader_reset()
-
-	if (stage_edit.enabled){
 		selectRects := make([dynamic]Rect, context.temp_allocator)
 		if(stage_edit.cursor_contents != nil){
 			#partial switch contents in stage_edit.cursor_contents{
@@ -751,7 +473,7 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 									ts.sprite,
 									Rect{Vec2(tileCursorPos)*tileSize, partRect.size},
 									partRect,
-									0, sdl2.RendererFlip(flip%3), angle, COLOR_WHITE, 0.5, .blend, partRect.size/2
+									0, sdl3.FlipMode(flip%3), angle, COLOR_WHITE, 0.5, partRect.size/2
 								)
 							}
 						}
@@ -773,8 +495,14 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 		
 		tex_target_clear()
 
-		srcRect := sdl2.Rect{0, 0, i32(f32(DISPLAY_WIDTH)/stage_edit.zoom), i32(f32(DISPLAY_HEIGHT)/stage_edit.zoom)}
-		sdl2.RenderCopy(display._renderer, texBuffer_active_tex(stage_edit.draw_textures), &srcRect, nil)
+		//the editor view is a zoomed crop of its own buffer, blown up to fill the whole target
+		editTex := stage_edit.draw_tex
+		zoomUV := (DISPLAY_SIZE/stage_edit.zoom)/Vec2(editTex.size)
+		render_quad(editTex.ptr, tex_sampler(editTex), Quad{
+			worldRect = {size = window_size()},
+			uvRect = {0, 0, zoomUV.x, zoomUV.y},
+			blend = BLEND_WHITE,
+		})
 
 		sizeFactor := f32(settings.window_scale)*stage_edit.zoom
 
@@ -798,12 +526,11 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 			startPos *= tileSize
 			endPos := startPos + window_size() + tileSize*2
 
-			draw_color(COLOR_BLACK)
 			for x:=startPos.x;x<endPos.x;x+=tileSize.x{
-				draw_line(x, startPos.y, x, endPos.y)
+				draw_line(x, startPos.y, x, endPos.y, color=COLOR_BLACK)
 			}
 			for y:=startPos.y;y<endPos.y;y+=tileSize.y{
-				draw_line(startPos.x, y, endPos.x, y)
+				draw_line(startPos.x, y, endPos.x, y, color=COLOR_BLACK)
 			}
 
 
@@ -822,7 +549,11 @@ _stage_render :: proc(){ //handles depth-sorted rendering for the stage
 			draw_rect(multiSelectRect, COLOR_BLUE, 0.3)
 		}
 	}
-	else{
+	else{ //reset stage draw settings
+		render_depth_layer(.stageTop)
+		shader_reset()
 		camera_reset()
-	}
+		_colliders_debug_draw()
+	} 
+
 }

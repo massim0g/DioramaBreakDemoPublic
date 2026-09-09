@@ -52,7 +52,7 @@ pipeline_stages_run :: proc(pipeline:^Pipeline, fullRebuild:bool){
 		}
 
 		stageContent := string(stageData)
-		if config.debug{
+		if config_build.debug{
 			relativePath,_ := filepath.rel(pipeline.watchDir, filepath.dir(file.path))
 			if relativePath == "." do relativePath = "" //stages at the root of stages/ use an empty path
 			trimmed := strings.trim_left_space(stageContent)

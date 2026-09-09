@@ -25,7 +25,6 @@ EntitySystem :: struct{
 
 	_component_arrays:ComponentArrays,
 
-	draw_step:int //used for draw events that need to draw at multiple depths and so get split into multiple steps
 }
 entities:^EntitySystem
 
@@ -88,7 +87,7 @@ ComponentBase :: struct{
 
 RenderComponentBase :: struct{
     using baseBase:ComponentBase,
-    depth:union{f32, []f32},
+    depth:f32,
     visible:bool
 }
 
@@ -157,7 +156,6 @@ Event :: enum{
 	bulkUpdate, //special event used outside of the normal event_process proc. Can be used to efficiently work on the whole array of components, rather than one at a time. Better for performance but loses some convenience.
 	preDraw,
     draw,
-	drawEnd, //called after UI draws, still targeting main tex
 	drawEditor, //`draw` is also called in-editor, so this event is for additional draws
 	editorUndo,
 	editorRedo
@@ -184,7 +182,6 @@ EVENT_NIL_ARRAY :: [Event]i8{
 	.bulkUpdate = EVENT_NIL_PRIORITY,
 	.preDraw = EVENT_NIL_PRIORITY,
     .draw = EVENT_NIL_PRIORITY,
-	.drawEnd = EVENT_NIL_PRIORITY, 
     .drawEditor = EVENT_NIL_PRIORITY,
 	.editorUndo = EVENT_NIL_PRIORITY,
 	.editorRedo = EVENT_NIL_PRIORITY,
@@ -653,59 +650,6 @@ _entities_event_process :: proc(event:Event){
     for id in entities.component_type_event_register[event]{
         entities.component_type_metadata[id].process_array(event)
     }
-}
-
-_entities_render_event_process :: proc(e:Event){
-	ComponentDepthListEntry :: struct{
-		process:proc(base:^ComponentBase, event:Event, overrideDisabled:=false),
-		base:^RenderComponentBase,
-		depth:f32,
-		step:int
-	}
-
-	depthList := make([dynamic]ComponentDepthListEntry, context.temp_allocator)
-
-	for componentType in entities.component_type_event_register[e]{
-		metadata := &entities.component_type_metadata[componentType]
-		arr := metadata.get_array_pointer()
-		process := metadata.process
-		basePtr := uintptr(arr.data)
-		size := uintptr(reflect.size_of_typeid(metadata.type))
-		len := uintptr(arr.len)
-
-		for ptr:=basePtr; ptr<basePtr+size*len; ptr+=size{
-			renderPtr := cast(^RenderComponentBase)ptr
-			if(renderPtr.visible){
-				switch d in renderPtr.depth{
-					case f32: 
-						append(&depthList, ComponentDepthListEntry{
-							process,
-							renderPtr,
-							d, 0
-						})
-					case []f32:
-						for d_, i in d{
-							append(&depthList, ComponentDepthListEntry{
-								process,
-								renderPtr,
-								d_, i
-							})
-						}
-				}
-				
-			}
-		}
-	}
-
-	sort_array(&depthList, proc(a,b:ComponentDepthListEntry) -> bool{
-        return a.depth > b.depth
-    })
-
-	for entry in depthList{
-		entities.draw_step = entry.step
-		entry.process(entry.base, e)
-	}
-    
 }
 
 /*

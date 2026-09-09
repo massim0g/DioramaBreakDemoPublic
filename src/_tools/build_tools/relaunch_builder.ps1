@@ -10,7 +10,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = "$ScriptDir\..\..\.." | Convert-Path
 $BuilderPackage = Join-Path -Path $ScriptDir -ChildPath "massimodin_builder"
 $BuilderExe = Join-Path -Path $ScriptDir -ChildPath "massimodin_builder.exe"
-$BuildConfigPath = Join-Path -Path $ProjectDir -ChildPath "src\build_config.json"
+$BuildConfigPath = Join-Path -Path $ProjectDir -ChildPath "config_build.json"
 
 # Use project-local Odin if available (.deps/odin/ installed by install.ps1)
 # (FMOD Studio in .deps needs no PATH entry, the builder resolves it itself)
@@ -29,8 +29,9 @@ if ($daemon) {
     $daemon | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 }
 
-# When run interactively, guard against accidentally building in release mode
-if (-not $release) {
+# When run interactively, guard against accidentally building in release mode.
+# The config is gitignored and may not exist yet; the builder generates it on startup in that case.
+if (-not $release -and (Test-Path $BuildConfigPath)) {
     $buildConfig = Get-Content $BuildConfigPath -Raw | ConvertFrom-Json
     if (-not $buildConfig.debug) {
         $answer = Read-Host "Build config is set to release mode. Switch to debug? (y/n)"
@@ -44,7 +45,7 @@ if (-not $release) {
 
 # Recompile the daemon
 Write-Host "Compiling builder..."
-& odin build $BuilderPackage -out:$BuilderExe
+& odin build $BuilderPackage -out:$BuilderExe -o:minimal
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Failed to compile builder."
     exit 1

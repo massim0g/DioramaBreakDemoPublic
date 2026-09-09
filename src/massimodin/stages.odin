@@ -1,7 +1,7 @@
 #+feature using-stmt
 package massimodin //@nested-tags:stages
 
-import "../sdl2"
+import "../sdl3"
 import "core:reflect"
 import "core:encoding/json"
 import "core:strings"
@@ -24,11 +24,10 @@ StageSystem :: struct{
 
 	allocator:Allocator, //freed on stage end
 	
-	camera_pos:Vec2,
+	camera_pos:Vec2, //rounded stage camera position
+	camera_pos_subpixel:Vec2, //fractional remainder of the camera position, applied as a shift when blitting to the window
 	target_camera_pos:Vec2,
 	debugEntitiesVisible:bool,
-	render_depth_list:[dynamic]DepthListEntry, //initialized in stage_render
-	render_depth_list_sorted_refs:[dynamic]DepthListRef, //initialized in stage_render
 	shadow_map:Tex,
 	shadow_layer:Tex,
 	drop_shadows:[dynamic]DropShadow,
@@ -104,7 +103,7 @@ StageEditSystem :: struct{
 		^[2]u16 //line
 	},
 
-	draw_textures:TexBuffer,
+	draw_tex:TexBuffered,
 
 	using undoables:^struct{
 		cursor_contents:union{
@@ -149,7 +148,7 @@ _stage_system_init :: proc(){
 	init(&stage.footstepSurfaceOverrides)
 	init(&stage.requiredTextureGroups)
 	stage.shadow_map = tex_make(DISPLAY_SIZE)
-	stage.shadow_layer = tex_make(DISPLAY_SIZE)
+	stage.shadow_layer = tex_make(DISPLAY_SIZE + {1,1}) //covers the world tex's overdraw pixel
 	init(&stage.drop_shadows)
 
 	stage.bounds = Rect{0, DISPLAY_SIZE}
@@ -171,7 +170,7 @@ _stage_edit_init :: proc(){
 	init(&stage_edit.tile_brush_selection, 0, 0, os_allocator)
 
 	imgui.TextFilter_Build(&stage_edit.asset_selector_filter)
-	stage_edit.draw_textures = texBuffer_make(4096)
+	stage_edit.draw_tex = texBuffered_make(4096)
 	stage_edit.tile_widget_tex = tex_make(1,1)
 	stage_edit.grid_tile_size = {16, 16}
 	stage_edit.grid_offset = {0,0}
@@ -202,7 +201,7 @@ StageLayerTiles :: struct{
 }
 
 StageLayerShader :: struct{
-	shader:Shader,
+	shader:^Shader,
 	resetZ:f32
 }
 
@@ -338,7 +337,7 @@ stage_entity_at_mouse :: proc(precise:=false) -> ^StageEntity{
 	outDepth :f32= -1
 	//if out != nil do outDepth = (out.depth == nil) ? -out.transform.y : out.depth.(f32)
 	for &stageEntity in coall(StageEntity){
-		entDepth := (stageEntity.depth == nil) ? -stageEntity.transform.y + stageEntity.editableDepthOffset : stageEntity.depth.(f32)
+		entDepth := (stageEntity.depthKind == .precise) ? -stageEntity.transform.y + stageEntity.editableDepthOffset : stageEntity.depth
 		spr := stageEntity.spriter.mySprite
 		drawRect := sprite_draw_rect(stageEntity.spriter.mySprite, stageEntity_draw_pos(&stageEntity), 0, stageEntity.transform.scale)
 		if(
@@ -347,13 +346,13 @@ stage_entity_at_mouse :: proc(precise:=false) -> ^StageEntity{
 			rect_contains(drawRect, mousePos)
 		){
 			frame := spr.frames[0]
-			if precise && abs(stageEntity.transform.scale) == {1,1} && frame.texturePageSurface!=nil{
+			if precise && abs(stageEntity.transform.scale) == {1,1} && frame.texturePage.surface!=nil{
 				tpp := frame.texturePagePos
 				relativePos := Vec2i(mousePos - drawRect.pos)
 				if stageEntity.transform.scale.x < 0 do relativePos.x = int(drawRect.size.x) - relativePos.x
 				if stageEntity.transform.scale.y < 0 do relativePos.y = int(drawRect.size.y) - relativePos.y
 				relativePos += Vec2i{int(tpp.x), int(tpp.y)}
-				if !surface_pixel_filled(frame.texturePageSurface, relativePos.x, relativePos.y) do continue
+				if !surface_pixel_filled(frame.texturePage.surface, relativePos.x, relativePos.y) do continue
 			}
 			out = &stageEntity
 			outDepth = entDepth
@@ -467,8 +466,8 @@ stage_layer_depth :: proc(layer:StageLayer) -> f32{
 		case StageLayerImage, StageLayerTint, StageLayerShader:
 			baseDepth:f32
 			switch layer.depthKind{
-				case .floor: baseDepth = DEPTH_MAX
-				case .foreground: baseDepth = -DEPTH_MAX
+				case .floor: baseDepth = layer_depth(.stageBG)
+				case .foreground: baseDepth = layer_depth(.stageFG)
 				case .wall: baseDepth = -layer.offset.y
 			}
 			return layer.z + baseDepth
@@ -480,7 +479,7 @@ stage_layer_depth :: proc(layer:StageLayer) -> f32{
 				return -drawPos.y + f32(tileSize.y*(variant.tileData.h-2))
 			}
 			else{
-				return layer.z + (layer.depthKind == .foreground ? -DEPTH_MAX : DEPTH_MAX)
+				return layer.z + (layer.depthKind == .foreground ? layer_depth(.stageFG) : layer_depth(.stageBG))
 			}
 	}
 	unreachable()
@@ -659,12 +658,12 @@ _stage_edit_asset_selector_update :: proc($assetType:typeid, popupId:cstring="")
 				}
 			}
 		}
-		else when(assetType == Shader){
+		else when(assetType == ^Shader){
 			buttonSize = {230, 20}*imgui_system.scale
-			for name, shader in shaders._shaders_map{
-				cName := string_to_cstring(name, context.temp_allocator)
+			for &shader in render._shaders_array{
+				cName := string_to_cstring(shader.name, context.temp_allocator)
 				if(imgui.TextFilter_PassFilter(&stage_edit.asset_selector_filter, cName)){
-					selectedShader := shader
+					selectedShader := &shader
 					imgui.BeginGroup()
 						if(imgui.Button(cName, buttonSize)){
 							imgui.CloseCurrentPopup()
@@ -738,8 +737,8 @@ _stage_edit_asset_selector_update :: proc($assetType:typeid, popupId:cstring="")
 		if(popup) do imgui.EndPopup()
 	}
 
-	when assetType == Shader{
-		if selected == false do selected = asset != 0
+	when assetType == ^Shader{
+		if selected == false do selected = asset != nil
 	}
 	else{
 		if selected == false do selected = asset != nil
@@ -797,13 +796,13 @@ stage_edit_gui_field_uip :: proc(type:^reflect.Type_Info, name:string, valPtr:ui
 				pushUndo = true
 			}
 			return pushUndo
-		case Shader:
-			shaderPtr := cast(^Shader)valPtr
+		case ^Shader:
+			shaderPtr := cast(^^Shader)valPtr
 			shader := shaderPtr^
-			if(imgui.Button(imgui_label((shader == 0) ? "nil" : shader_name(shader)))){
+			if(imgui.Button(imgui_label((shader == nil) ? "nil" : shader.name))){
 				_stage_edit_asset_selector_open(fieldLabel)
 			}
-			if shader,pushUndo = _stage_edit_asset_selector_update(Shader, fieldLabel); pushUndo do shaderPtr^=shader
+			if shader,pushUndo = _stage_edit_asset_selector_update(^Shader, fieldLabel); pushUndo do shaderPtr^ = shader
 			return pushUndo
 	}
 
@@ -1361,7 +1360,7 @@ _stage_edit_end :: proc(){
 	reset(&stage_edit.redoStack)
 
 	stage_goto(stage.loaded) //reload stage
-	tex_resize(&stage.shadow_layer, DISPLAY_SIZE)
+	tex_resize(&stage.shadow_layer, DISPLAY_SIZE + {1,1})
 }
 _stage_edit_update :: proc(){
 	//ENABLE/DISABLE STAGE EDIT
@@ -1909,11 +1908,11 @@ _stage_edit_update :: proc(){
 						}
 	
 						switch hoverResizingMode{
-							case {0,0}: window_system_cursor_set(.ARROW)
-							case {1,1}, {-1,-1}: window_system_cursor_set(.SIZENWSE)
-							case {-1,1}, {1,-1}: window_system_cursor_set(.SIZENESW)
-							case {1,0}, {-1,0}: window_system_cursor_set(.SIZEWE)
-							case {0,1}, {0,-1}: window_system_cursor_set(.SIZENS)
+							case {0,0}: window_system_cursor_set(.DEFAULT)
+							case {1,1}, {-1,-1}: window_system_cursor_set(.NWSE_RESIZE)
+							case {-1,1}, {1,-1}: window_system_cursor_set(.NESW_RESIZE)
+							case {1,0}, {-1,0}: window_system_cursor_set(.EW_RESIZE)
+							case {0,1}, {0,-1}: window_system_cursor_set(.NS_RESIZE)
 						}
 					}
 				}
@@ -2117,10 +2116,10 @@ _stage_edit_update :: proc(){
 								stage_edit.mouse_drag_edit_dirty = true
 	
 								frame := sprite.frames[0]
-								size := Vec2{f32(frame.texturePagePos.w), f32(frame.texturePagePos.h)}
+								size := frame.texturePagePos.size
 	
 								flipVec := Vec2(flip)
-								origin := Vec2{f32(sprite.origin.x - frame.trimOffset.x), f32(sprite.origin.y - frame.trimOffset.y)}
+								origin := sprite.origin - frame.trimOffset
 								origin += (size - origin*2 - {1,1})*flipVec
 	
 								newScale := newRect.size/sprite_draw_rect(sprite, Vec2{0,0}).size
@@ -2362,8 +2361,8 @@ _stage_edit_update :: proc(){
 		}
 
 		entityDepth :: proc(ent:^StageEntity)->f32{
-			if d,ok := ent.depth.(f32); ok do return d
-			else do return -ent.transform.y + ent.editableDepthOffset //mainly here as a failsafe, shouldn't really come up
+			if ent.depthKind != .precise do return ent.depth
+			return -ent.transform.y + ent.editableDepthOffset //precise entities don't keep a single depth
 		}
 
 		entityGroups := make([dynamic]entityGroup, context.temp_allocator)
@@ -2393,7 +2392,7 @@ _stage_edit_update :: proc(){
 			})
 
 			append(&depthList, depthEntry{
-				entityDepth(group[0]) - DEPTH_MAX*2,
+				layer_depth(.stageTop) + entityDepth(group[0]),
 				&group
 			})
 		}
@@ -2707,6 +2706,8 @@ stageEntity_make_from_json :: proc(entityData:json.Object) -> ^Entity{
 
 //saves the current stage to a file
 _stage_save :: proc(forceSaveAs:=false)->(ok:bool){ 
+	when !ON_WINDOWS do return true //never save game project files on non-windows builds
+
 	when tracy.TRACY_ENABLE{
 		lastTAT := tracy_auto_trace
 		tracy_auto_trace = false
@@ -3134,8 +3135,8 @@ _stage_system_update :: proc(){
 // stage_data_load_from_file :: proc(path:string, allocator:=context.temp_allocator) -> Stage{
 // 	pathCstr := string_to_cstring(path, context.temp_allocator)
 // 	fileSize:uint
-// 	fileDataPtr := sdl2.LoadFile(rawptr(pathCstr), &fileSize)
-// 	defer sdl2.free(fileDataPtr)
+// 	fileDataPtr := sdl3.LoadFile(rawptr(pathCstr), &fileSize)
+// 	defer sdl3.free(fileDataPtr)
 
 // 	jsonData := slice.bytes_from_ptr(fileDataPtr, int(fileSize))
 // 	jsonVal, err := json.parse(jsonData, json.DEFAULT_SPECIFICATION, false, allocator)

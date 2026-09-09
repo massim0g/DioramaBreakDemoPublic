@@ -221,10 +221,9 @@ Now come, stand on the altar.
 
 `c, proAndMayorGetIntoPosition, false``a,5.66`
 
-`a`![[dendro.png]]Phyllo, the notes.
+`a,0.7`![[dendro.png]]Phyllo, the notes.
 
-![[phyllo.png]]
-Yes sir.
+`a`![[phyllo.png]]Yes sir.
 
 `c, phylloHandsOverScript`
 

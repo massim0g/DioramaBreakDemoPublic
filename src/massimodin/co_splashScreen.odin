@@ -14,13 +14,11 @@ splash_shine_seq :: proc(pos:Vec2, key:ImKey=#caller_location) -> bool{
 		alpha2::57./255.
 		alpha3::222./255.
 		if seq_cue(0){
-			draw_color(COLOR_WHITE, 115)
-			draw_circle(pos, 152)
+			draw_circle(pos, 152, COLOR_WHITE, 115./255.)
 			audio_play(au.splashShine)
 		}
 		if seq_cue(1){
-			draw_color(COLOR_WHITE, 115)
-			draw_circle(pos, 184)
+			draw_circle(pos, 184, COLOR_WHITE, 115./255.)
 			draw_rings(pos, {184, 152}, alphas={alpha1, alpha1})
 			sprite_draw_ex(sp.splashShine, pos, angle=angle, alpha=alpha1)
 		}
@@ -50,7 +48,8 @@ self := cast(^SplashScreen)base
 using self
 #partial switch event{
 case .init:
-case .drawEnd:
+case .draw:
+	render_depth_ui(.menus)
 	if tease{
 		seq_open()
 		region := Rect{0, DISPLAY_SIZE_HD}

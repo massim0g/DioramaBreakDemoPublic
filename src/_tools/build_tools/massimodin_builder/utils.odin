@@ -10,10 +10,29 @@ import "core:bytes"
 import "core:sys/windows"
 import uuids "core:encoding/uuid"
 import "core:math/rand"
-import "dialogue_builder"
+import "core:slice"
 
-print :: fmt.println
-printf :: fmt.printfln
+console_output_mode:windows.DWORD
+
+console_mode_capture :: proc(){
+	windows.GetConsoleMode(windows.GetStdHandle(windows.STD_OUTPUT_HANDLE), &console_output_mode)
+}
+
+console_mode_ensure :: proc(){
+	if console_output_mode == 0 do return
+	h := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
+	mode:windows.DWORD
+	if windows.GetConsoleMode(h, &mode) && mode != console_output_mode do windows.SetConsoleMode(h, console_output_mode)
+}
+
+print :: proc(args:..any, sep:=" ") -> int{
+	console_mode_ensure()
+	return fmt.println(..args, sep=sep)
+}
+printf :: proc(format:string, args:..any) -> int{
+	console_mode_ensure()
+	return fmt.printfln(format, ..args)
+}
 assertf :: fmt.assertf
 
 //File Helpers
@@ -31,6 +50,28 @@ dir_remove :: proc(path:string){
 		else do os.remove(entry.fullpath)
 	}
 	os.remove(path)
+}
+
+dir_copy :: proc(srcPath, destPath:string, patterns:[]string=nil) -> os.Error{
+	dh := os.open(srcPath) or_return
+	defer os.close(dh)
+
+	entries := os.read_all_directory(dh, context.temp_allocator) or_return
+
+	if !os.exists(destPath) do os.make_directory_all(destPath) or_return
+
+	for entry in entries{
+		entryDest, _ := filepath.join({destPath, entry.name}, context.temp_allocator)
+		if entry.type == .Directory do dir_copy(entry.fullpath, entryDest, patterns) or_return
+		else{
+			matched := patterns == nil
+			for p in patterns{
+				if ok,_ := filepath.match(p, entry.name);ok{matched = true; break}
+			}
+			if matched do os.copy_file(entryDest, entry.fullpath) or_return
+		}
+	}
+	return nil
 }
 
 count_files_with_ext :: proc(dir:string, ext:string) -> int{
@@ -209,6 +250,12 @@ next_power_of_two :: proc "contextless" (x:int) -> int{
 	return k
 }
 
+//Drops a leading UTF-8 BOM (EF BB BF) if present
+strip_bom :: proc(data:[]u8) -> []u8{
+	if len(data) >= 3 && slice.simple_equal(data[:3], []u8{0xEF, 0xBB, 0xBF}) do return data[3:]
+	return data
+}
+
 // String helpers
 
 sanitize_asset_name :: proc(name:string, allocator := context.allocator) -> string{
@@ -292,16 +339,16 @@ find_line_index :: proc(lines:[]string, target:string) -> int{
 	return -1
 }
 
-capitalize_first :: proc(s:string) -> string{
+capitalize_first :: proc(s:string, allocator:=context.temp_allocator) -> string{
 	if len(s) == 0 do return s
 	first := s[0]
 	if first >= 'a' && first <= 'z'{
-		buf := make([]u8, len(s))
+		buf := make([]u8, len(s), allocator)
 		buf[0] = first - 32
 		copy(buf[1:], s[1:])
 		return string(buf)
 	}
-	return strings.clone(s)
+	return strings.clone(s, allocator)
 }
 
 slice_to_dynamic :: proc(a: $T/[]$E, allocator:mem.Allocator) -> [dynamic]E {

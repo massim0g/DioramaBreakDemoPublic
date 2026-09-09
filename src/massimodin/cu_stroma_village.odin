@@ -42,7 +42,7 @@ _cutscenes_reload_stroma_village :: proc(){
 				seq_wait(60) &&
 				camera_pan_to_seq(player.transform.pos+camera.tracking_offset)
 			{
-				camera_tracking_set(player.transform)
+				camera_tracking_set(player.stageCharacter._ptr)
 				return seq_close(.end)
 			}
 		}
@@ -113,7 +113,7 @@ _cutscenes_reload_stroma_village :: proc(){
 			if seq_cue(36) do scface("hinoki", .left)
 			trabe := scfind("trabe", true)
 			if scmove(trabe, {{457,303}, {357,237}, {115,148}}) && transition_seq(proc(){
-				camera_tracking_set(scfind("pro").transform)
+				camera_tracking_set(scfind("pro"))
 				entity_destroy(scfind("trabe"))
 				entity_destroy(scfind("hinoki"))
 				stageEntity_group_set_visible("hinokiSitting", true)

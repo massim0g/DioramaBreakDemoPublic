@@ -117,6 +117,9 @@ MEMORY_FREE_CALLBACK :: #type proc(ptr: rawptr, type: u32, sourceStr: cstring)
 when ODIN_OS == .Windows {
     foreign import lib "lib/x64/fsbank_vs.lib"
 }
+else when ODIN_OS == .Linux {
+    foreign import lib "system:fsbank"
+}
 
 @(default_calling_convention = "c", link_prefix = "FSBank_")
 foreign lib {

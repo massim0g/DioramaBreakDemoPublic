@@ -1,5 +1,6 @@
 package massimodin //@nested-tags:libraries/mesh
 
+//Data structure, NOT for renderer
 Mesh :: struct{
 	vertices:[dynamic]Vec2,
 	edges:[dynamic][2]u16

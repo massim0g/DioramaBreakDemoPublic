@@ -71,7 +71,7 @@ case .update:
 		}
 	}
 case .preDraw:
-	depth = stageEntity.depth.(f32) - 0.5
+	depth = stageEntity.depth - 0.5
 case .draw:
 	if awareOfPlayer{
 		dr := stageEntity_draw_rect(stageEntity, 0)

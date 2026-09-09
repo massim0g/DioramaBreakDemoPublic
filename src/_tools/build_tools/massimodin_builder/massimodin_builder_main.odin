@@ -21,7 +21,9 @@ PIPELINE_PACKED_KINDS :: PipelineKinds{.fonts, .shaders, .curves, .stages}
 //pipelines that produce generated code
 PIPELINE_CODEGEN_KINDS :: PipelineKinds{.sprites, .fonts, .shaders, .curves, .stages, .dialogues, .audio}
 //pipelines that depend on other pipelines and must wait to be dispatched
-PIPELINE_DEPENDENT_KINDS :: PipelineKinds{.code, .packer}
+PIPELINE_DEPENDENT_KINDS :: PipelineKinds{.code, .packer, .otherTargets}
+//pipelines whose build/_win64 outputs get mirrored into the other targets' build dirs by the otherTargets pipeline
+PIPELINE_MIRRORED_KINDS :: PipelineKinds{.audio, .sprites, .dialogues, .packer}
 
 pipelines:[PipelineKind]Pipeline
 pipeline_pool:thread.Pool
@@ -32,6 +34,7 @@ paths:struct{
 	project:string,
 	build:string,
 	build_win64:string,
+	build_linux:string,
 	src:string,
 	massimodin:string,
 	script:string,
@@ -93,7 +96,7 @@ full_rebuild :: proc(){
 		path, _ := filepath.join({paths.build, subdir}, context.temp_allocator)
 		os.make_directory(path)
 	}
-	if config.previewTexturePages do os.make_directory(filepath.join({paths.build, "texture_page_previews"}, context.temp_allocator) or_else "")
+	if config_build.previewTexturePages do os.make_directory(filepath.join({paths.build, "texture_page_previews"}, context.temp_allocator) or_else "")
 
 	// Dispatch all non-dependent pipelines in parallel
 	for kind in ~PIPELINE_DEPENDENT_KINDS{
@@ -104,7 +107,17 @@ full_rebuild :: proc(){
 	// Dependent pipelines
 	pipeline_task_dispatch(&pipelines[.packer], true)
 	pipeline_task_dispatch(&pipelines[.code], true)
-	pipelines_block({.packer, .code})
+
+	pipelines_block({.packer})
+
+	// Other targets' builds mirror the artifacts produced above (code binaries come from the code pipeline)
+	if building_other_targets{
+		pipeline_task_dispatch(&pipelines[.otherTargets], true)
+		pipelines_block({.otherTargets})
+	}
+
+	pipelines_block({.code})
+
 
 	for &p in pipelines{
 		pipeline_status_set(&p, .idle)
@@ -135,12 +148,14 @@ init :: proc(){
 	paths.project, _ = filepath.join({#location().file_path, "/../../../../../"})
 	paths.build, _ = filepath.join({paths.project, "build"})
 	paths.build_win64, _ = filepath.join({paths.build, "_win64"})
+	paths.build_linux, _ = filepath.join({paths.build, "_linux"})
 	paths.src, _ = filepath.join({paths.project, "src"})
 	paths.massimodin, _ = filepath.join({paths.project, "src/massimodin"})
 	paths.script, _ = filepath.join({#location().file_path, "/../../"})
 	paths.exe, _ = filepath.join({paths.build_win64, "DioramaBreak.exe"})
 
-	load_config()
+	config_build_load()
+	config_run_load() //result discarded, this is just so a missing/outdated run config gets generated and reviewed at startup
 
 	PipelineDef :: struct{
 		runProc:PipelineRunProc,
@@ -151,14 +166,15 @@ init :: proc(){
 	defs := [PipelineKind]PipelineDef{
 		.sprites   = {pipeline_sprites_run,   filepath.join({paths.project, "sprites"}) or_else "",   			{".aseprite", ".ase", ".png"}, 	true},
 		.fonts     = {pipeline_fonts_run,     filepath.join({paths.project, "fonts"}) or_else "",     			{".json", ".ttf", ".index"},   	true},
-		.shaders   = {pipeline_shaders_run,   filepath.join({paths.project, "shaders"}) or_else "",   			{".frag"},                     	true},
+		.shaders   = {pipeline_shaders_run,   filepath.join({paths.project, "shaders"}) or_else "",   			{".hlsl"},                     	true},
 		.dialogues = {pipeline_dialogues_run, filepath.join({paths.project, "dialogues"}) or_else "", 			{".md"},                       	true},
 		.curves    = {pipeline_curves_run,    filepath.join({paths.project, "curves"}) or_else "",    			{".curve"},                    	true},
 		.stages    = {pipeline_stages_run,    filepath.join({paths.project, "stages"}) or_else "",    			{".json"},                     	true},
 		.libs      = {pipeline_lib_run,       filepath.join({paths.project, "lib"}) or_else "",       			{},                            	true},
 		.audio     = {pipeline_audio_run,     filepath.join({paths.project, "audio/Metadata/Event"}) or_else "", {".xml"},                      	false},
-		.code      = {pipeline_code_run,      paths.src,     													{".odin", ".json"},             			true},
+		.code      = {pipeline_code_run,      paths.src,     													{".odin"},             			true},
 		.packer    = {pipeline_packer_run,    "",           													{},                            	false},
+		.otherTargets = {pipeline_other_targets_run, "",											 		{},                            	false},
 	}
 
 	for kind in PipelineKind{
@@ -177,12 +193,13 @@ init :: proc(){
 }
 
 main :: proc(){
+	console_mode_capture()
 	os_allocator = context.allocator //for doing os allocations from threaded code
 
 	init()
 
 	print("BUILDER STARTED")
-	print("Build config:", config)
+	print("Build config:", config_build)
 
 	threadCount := max(os.get_processor_core_count() / 2, 2)
 	thread.pool_init(&pipeline_pool, allocator_make(), threadCount)

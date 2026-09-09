@@ -94,12 +94,17 @@ log10 :: math.log10
 pow10 :: math.pow10
 min :: linalg.min
 max :: linalg.max
+max_n :: builtin.max
 int_max :: math.max
 int_min :: math.min
 INT_MAX :: builtin.max(int) //shorthand
 INT_MIN :: builtin.min(int)
+
 log :: math.log_f32
 INF :: math.INF_F32
+
+//Largest integer storeable in an f32 without losing precision (2^24)
+INT_MAX_F32 :: 16_777_216
 
 PI :: math.PI
 TAU :: math.TAU

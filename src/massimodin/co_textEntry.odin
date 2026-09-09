@@ -56,7 +56,7 @@ case .init:
 	inputCharacterSize = char_size('M', font) + {11,0} 
 	timer_add(&fadeTimer, 20)
 	timer_start(fadeTimer)
-	depth = -DEPTH_MAX
+	depth = ui_layer_depth(.menus)
 	maxCharacters = 14
 	shift = true
 case .update:
@@ -77,7 +77,7 @@ case .draw:
 	}
 
 	camera_set(0)
-	draw_rect(0, DISPLAY_SIZE, COLOR_BLACK, alpha*0.5)
+	draw_rect_fullscreen(COLOR_BLACK, alpha*0.5)
 	fonts.default = font
 	mdp := mouse_display_pos()
 	selected := fadeTimer.state != .active && ginputs[.confirm]

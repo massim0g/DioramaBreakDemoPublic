@@ -2,12 +2,11 @@
 package massimodin //@nested-tags:engine/visuals
 
 import "core:path/filepath"
-import "../sdl2"
+import "../sdl3"
 import "core:image/png"
 import "core:os"
 import "../imgui"
 import "core:math"
-import gl "vendor:OpenGL"
 
 DISPLAY_WIDTH :: 480
 DISPLAY_HEIGHT :: 270
@@ -21,133 +20,116 @@ DISPLAY_SIZE_HD :: Vec2{DISPLAY_WIDTH_HD, DISPLAY_HEIGHT_HD}
 DISPLAY_BASE_COLOR :: Color{0xBD, 0xE3, 255}
 
 DisplaySystem :: struct{
-	_window:^sdl2.Window,
-	_renderer:^sdl2.Renderer,
+	_window:^sdl3.Window,
 
-	main_textures:TexBuffer,
+	main_tex:TexBuffered, //native res +1, anything below the ui draws here, gets sub-pixel shifted slightly when blown up and drawn to the window tex for smooth camera movement 
+	window_tex:TexBuffered, //window-res, main_tex draws on here, then all UI draws (scaled appropriately using renderer coordinate scaling). Treat as though it's native-res when drawing to it. 
 	hd_tex:Tex,
 	hd_enabled:bool,
-	_tex_target_stack:[dynamic]Tex,
-	draw_color:Color,
-	draw_alpha:u8,
-	custom_blendmodes:[BlendMode]sdl2.BlendMode,
-	_system_cursor:^sdl2.Cursor,
-	_system_cursor_id:sdl2.SystemCursor,
+	_system_cursor:^sdl3.Cursor,
+	_system_cursor_id:sdl3.SystemCursor,
 }
 display:^DisplaySystem
 
-DisplayPerformanceMode :: enum{
-	normal,
-	reduced,
-	potato
-}
-
-DISPLAY_PERFORMANCE_FACTORS := [DisplayPerformanceMode]int{
-	.normal=1,
-	.reduced=2,
-	.potato=3
-}
-
-BlendMode :: enum{
-	none,
-	blend,
-	add,
-	mod,
-	mul,
-	multiply,
-	screen,
-	accumulate,
-	premul,
-	subtract,
-	subtractInverse,
-	one,
-	alphaMax,
-	invert,
-	alphaOnly
-}
-
+//Creates the window only. The GPU device claims it in _render_system_init, which must run straight after.
 _display_system_init :: proc(){
 	trace("Display System Init")
-	using sdl2
-	
+	using sdl3
+
 	display = new(DisplaySystem)
-	init(&display._tex_target_stack)
 
-	display.custom_blendmodes = {
-		.none = sdl2.BlendMode.NONE,
-		.blend = sdl2.BlendMode.BLEND, //.SRC_ALPHA, .ONE_MINUS_SRC_ALPHA, .ADD, .ONE, .ONE_MINUS_SRC_ALPHA, .ADD
-		.add = sdl2.BlendMode.ADD,
-		.mod = sdl2.BlendMode.MOD,
-		.mul = sdl2.BlendMode.MUL, //.DST_COLOR, .ONE_MINUS_SRC_ALPHA, .ADD, .DST_ALPHA, .ONE_MINUS_SRC_ALPHA, .ADD
-		.multiply = ComposeCustomBlendMode(.DST_COLOR, .ZERO, .ADD, .ZERO, .ONE, .ADD), //Photoshop-style multiply: srcRGB * dstRGB, preserves dstA
-		.screen = ComposeCustomBlendMode(.ONE, .ONE_MINUS_SRC_COLOR, .ADD, .ONE, .ONE_MINUS_SRC_ALPHA, .ADD),
-		.accumulate = ComposeCustomBlendMode(.SRC_ALPHA, .ONE, .ADD, .ONE, .ONE, .ADD), //blend items on a separate texture
-		.premul = ComposeCustomBlendMode(.ONE, .ONE_MINUS_SRC_ALPHA, .ADD, .ONE, .ONE_MINUS_SRC_ALPHA, .ADD), //should be used for rendering textures drawn with "accumulate"
-		.subtract = ComposeCustomBlendMode(.ZERO, .ONE, .ADD, .ZERO, .ONE_MINUS_SRC_ALPHA, .ADD),
-		.subtractInverse = ComposeCustomBlendMode(.ZERO, .ONE, .ADD, .ZERO, .SRC_ALPHA, .ADD),
-		.one = ComposeCustomBlendMode(.ONE, .ZERO, .ADD, .ONE, .ZERO, .ADD),
-		.alphaMax = ComposeCustomBlendMode(.ZERO, .ONE, .MAXIMUM, .ONE, .ONE, .MAXIMUM),
-		.invert = ComposeCustomBlendMode(.ONE, .DST_ALPHA, .SUBTRACT, .ONE, .ZERO, .SUBTRACT),
-		.alphaOnly = ComposeCustomBlendMode(.ZERO, .ONE, .ADD, .ONE, .ONE, .ADD),
-	}
-
-	display._window = CreateWindow(
-        "Diorama Break Demo", 
-        WINDOWPOS_CENTERED, WINDOWPOS_CENTERED, 
-       	DISPLAY_WIDTH, DISPLAY_HEIGHT, 
-        {.SHOWN, .OPENGL}
-    )
+	display._window = CreateWindow("Diorama Break Demo", DISPLAY_WIDTH, DISPLAY_HEIGHT, {})
 
 	SetWindowIcon(display._window, LoadBMP(string_to_cstring(filepath.join({executable_directory, "windowIcon.bmp"}, context.temp_allocator) or_else "", context.temp_allocator)))
-
-	display._renderer = CreateRenderer(display._window, -1, RENDERER_ACCELERATED)
-	assert(display._renderer != nil, "Renderer failed to initialize! Please verify that your graphics drivers are up to date and support OpenGL!")
-	
-	draw_color(0xBD, 0xE3, 255)
-	sdl2.SetRenderDrawBlendMode(display._renderer, .BLEND)
-	display.main_textures = texBuffer_make(DISPLAY_SIZE)
-	display.hd_tex = tex_make(DISPLAY_SIZE_HD, true)
 
 	when !DEBUG{
 		SetWindowSize(display._window, i32(DISPLAY_WIDTH*3), i32(DISPLAY_HEIGHT*3))
 		window_center()
-		
-		splashPath := filepath.join({executable_directory, "splashScreen.png"}, context.temp_allocator) or_else ""
-		splashImg, splashErr := png.load_from_file(splashPath, allocator=context.temp_allocator)
-		if splashErr == nil{
-			splashSurf := CreateRGBSurfaceWithFormatFrom(
-				raw_data(splashImg.pixels.buf), i32(splashImg.width), i32(splashImg.height), 32, i32(splashImg.width*4),
-				u32(PixelFormatEnum.ABGR8888),
-			)
-			defer FreeSurface(splashSurf)
-			windowSurf := GetWindowSurface(display._window)
-			BlitScaled(splashSurf, nil, windowSurf, nil)
-			UpdateWindowSurface(display._window)
-		}
 	}
 	else{ //force the window to appear on top after launching in debug mode
-		SetHint("SDL_HINT_FORCE_RAISEWINDOW", "1")
+		SetHint(HINT_FORCE_RAISEWINDOW, "1")
 		RaiseWindow(display._window)
 	}
 }
 
-_display_init :: proc(){
-	
+//Called once the GPU device exists. Creates the render targets and shows the splash.
+_display_targets_init :: proc(){
+	display.main_tex = texBuffered_make(DISPLAY_SIZE + {1,1}) //one pixel of overdraw for the smooth camera blit shift
+	display.window_tex = texBuffered_make(DISPLAY_SIZE*f32(settings.window_scale))
+	display.hd_tex = tex_make(DISPLAY_SIZE_HD, true)
+
+	when !DEBUG do _display_splash_draw()
 }
 
+DepthLayer :: enum{
+	stageBottom, //all stage draws should be above this
+	stageBG, //floor draws here
+	stage, //0, most stage elements draw right around here (+/- stage height)
+	stageFG, //stage foreground draws here
+	stageTop, //all stage draws should be below this
+	ui, //ui sub-layers start drawing here
+	uiTop, //all ui draws should be below this
+	window //anything above this draws directly to the window
+}
+DEPTH_LAYER_ZERO :: DepthLayer.stage
+DEPTH_LAYER_RANGE :: 100_000 //distance between depth layers
+
+DepthUnion :: union{
+	f32,
+	DepthLayer,
+	UILayer
+}
+
+/*
+The loading splash, shown before any assets (and therefore any shader) exist.
+BlitGPUTexture needs no pipeline, so this can run with nothing but a device and an uploaded texture.
+*/
+_display_splash_draw :: proc(){
+	splashPath := filepath.join({executable_directory, "splashScreen.png"}, context.temp_allocator) or_else ""
+	splashImg, splashErr := png.load_from_file(splashPath, allocator=context.temp_allocator)
+	if splashErr != nil do return
+
+	splashSize := Vec2i{splashImg.width, splashImg.height}
+	splashTex := texture_make_from_pixels(splashImg.pixels.buf[:], splashSize)
+	defer sdl3.ReleaseGPUTexture(render.device, splashTex)
+
+	cmdBuf := sdl3.AcquireGPUCommandBuffer(render.device)
+	swapchainTex:^sdl3.GPUTexture
+	winW, winH:u32
+	if !sdl3.WaitAndAcquireGPUSwapchainTexture(cmdBuf, display._window, &swapchainTex, &winW, &winH) || swapchainTex == nil{
+		_ = sdl3.CancelGPUCommandBuffer(cmdBuf)
+		return
+	}
+	sdl3.BlitGPUTexture(cmdBuf, {
+		source={texture=splashTex, w=u32(splashSize.x), h=u32(splashSize.y)},
+		destination={texture=swapchainTex, w=winW, h=winH},
+		load_op=.CLEAR,
+		clear_color={0, 0, 0, 1},
+		filter=.LINEAR,
+	})
+	_ = gpu_commands_submit(cmdBuf)
+	_ = sdl3.WaitForGPUIdle(render.device)
+}
+
+// WINDOW SCALING/POSITIONING
 
 //Sets the window scale and resizes the window based on that and the native display resolution
 window_resize :: proc(scale:int){
 	settings.window_scale = scale
-	sdl2.SetWindowSize(display._window, i32(DISPLAY_WIDTH*settings.window_scale), i32(DISPLAY_HEIGHT*settings.window_scale))
+	sdl3.SetWindowSize(display._window, i32(DISPLAY_WIDTH*settings.window_scale), i32(DISPLAY_HEIGHT*settings.window_scale))
+	
+	when ON_LINUX do sdl3.SyncWindow(display._window) //X11 applies size changes asynchronously, so without a sync window_center reads the old size
+	
 	window_center()
+
+	tex_resize(&display.window_tex.tex, DISPLAY_SIZE*f32(scale))
+	tex_resize(&display.window_tex.scratch, DISPLAY_SIZE*f32(scale))
 
 	when DEBUG{
 		_imgui_scale_update()
 	}
 }
 
-//
 window_scale_to_display :: proc(relativeScale:f32){
 	mSize := monitor_size()
 
@@ -156,24 +138,24 @@ window_scale_to_display :: proc(relativeScale:f32){
 }
 
 monitor_size :: proc() -> Vec2{
-	displayBounds:sdl2.Rect
-	sdl2.GetDisplayBounds(sdl2.GetWindowDisplayIndex(display._window), &displayBounds)
+	displayBounds:sdl3.Rect
+	sdl3.GetDisplayBounds(sdl3.GetDisplayForWindow(display._window), &displayBounds)
 	return Vec2{f32(displayBounds.w), f32(displayBounds.h)}
 }
 
 //Centers the window
 window_center :: proc(){
-	displayBounds:sdl2.Rect
-	sdl2.GetDisplayBounds(sdl2.GetWindowDisplayIndex(display._window), &displayBounds)
+	displayBounds:sdl3.Rect
+	sdl3.GetDisplayBounds(sdl3.GetDisplayForWindow(display._window), &displayBounds)
 	windowW:i32
 	windowH:i32
-	sdl2.GetWindowSize(display._window, &windowW, &windowH)
-	sdl2.SetWindowPosition(display._window, displayBounds.x + displayBounds.w/2-windowW/2, displayBounds.y + displayBounds.h/2 - windowH/2)
+	sdl3.GetWindowSize(display._window, &windowW, &windowH)
+	sdl3.SetWindowPosition(display._window, displayBounds.x + displayBounds.w/2-windowW/2, displayBounds.y + displayBounds.h/2 - windowH/2)
 }
 
 window_set_fullscreen :: proc(enabled:bool){
 	settings.window_fullscreen = enabled
-	sdl2.SetWindowFullscreen(display._window, enabled ? sdl2.WINDOW_FULLSCREEN_DESKTOP : {})
+	sdl3.SetWindowFullscreen(display._window, enabled) //SDL3: bool fullscreen, borderless desktop mode unless an exclusive mode is set
 	proc_call_delayed(proc(){
 		window_scale_to_display(settings.window_fullscreen?1:0.75)
 	}, 1)
@@ -183,7 +165,7 @@ window_set_fullscreen :: proc(enabled:bool){
 //Returns the current window size
 window_size :: proc() -> Vec2{
 	cw,ch:i32
-	sdl2.GetWindowSize(display._window, &cw, &ch)
+	sdl3.GetWindowSize(display._window, &cw, &ch)
 	return Vec2([2]i32{cw, ch})
 }
 
@@ -194,166 +176,12 @@ window_offset :: proc()->Vec2{
 	return (ws-ds)/2
 }
 
-window_system_cursor_set :: proc(id:sdl2.SystemCursor){
+window_system_cursor_set :: proc(id:sdl3.SystemCursor){
 	if(id == display._system_cursor_id) do return
-	sdl2.FreeCursor(display._system_cursor)
-	display._system_cursor = sdl2.CreateSystemCursor(id)
-	sdl2.SetCursor(display._system_cursor)
+	sdl3.DestroyCursor(display._system_cursor)
+	display._system_cursor = sdl3.CreateSystemCursor(id)
+	_ = sdl3.SetCursor(display._system_cursor)
 	display._system_cursor_id = id
-}
-
-//Redraws the main texture, can be used with a shader to apply a screenwide effect
-display_redraw :: proc(){
-	if display.hd_enabled do return //todo if needed
-	buffer := &display.main_textures
-	when DEBUG{
-		if stage_edit.enabled{
-			buffer = &stage_edit.draw_textures
-		}
-	}
-	lastTexInd := buffer.active
-	newTexInd := int(!bool(lastTexInd))
-	buffer.active = newTexInd
-	lastTex := buffer.textures[lastTexInd]
-	newTex := buffer.textures[newTexInd]
-	if len(display._tex_target_stack) > 0{
-		storedCamPos := camera.pos
-		display._tex_target_stack[0] = newTex
-		tex_target_set_stackless(newTex)
-		tex_draw(lastTex, 0, 0)
-		if len(display._tex_target_stack) > 1 do sdl2.SetRenderTarget(display._renderer, peek(display._tex_target_stack))
-		camera.pos = storedCamPos
-	}
-	else{
-		tex_target_set_stackless(newTex)
-		tex_draw(lastTex, 0, 0)
-		sdl2.SetRenderTarget(display._renderer, nil)
-	}
-}
-
-display_main_tex :: proc() -> Tex{
-	return display.hd_enabled ? display.hd_tex : texBuffer_active_tex(display.main_textures)
-}
-
-//Returns the display's inactive main texture. If copyContents is true, copies the current display contents to it before returning.
-display_main_tex_inactive :: proc(copyActiveContents:=true) -> Tex{
-	when DEBUG do buf := stage_edit.enabled ? stage_edit.draw_textures : display.main_textures
-	else do buf := display.main_textures
-
-	off := buf.textures[int(!bool(buf.active))]
-	if copyActiveContents{
-		tex_target_set(off)
-		tex_draw(texBuffer_active_tex(buf),0,0)
-		tex_target_reset()
-	}
-	return off
-}
-
-//Returns a display size value that depends on whether HD mode is on or not. For performance and safety, only use in cases where this is uncertain.
-display_size :: #force_inline proc "contextless"() -> Vec2{
-	return display.hd_enabled ? DISPLAY_SIZE_HD : DISPLAY_SIZE
-}
-
-_display_pre_draw :: proc(){
-	tex_target_set(display_main_tex())
-	draw_clear(DISPLAY_BASE_COLOR)
-}
-
-_display_post_draw :: proc(){
-	tex_target_clear()
-	draw_clear(COLOR_BLACK, 255)
-	ws := window_size()
-	ds := DISPLAY_SIZE*f32(settings.window_scale)
-	dst := rect_to_sdl_rect({(ws-ds)/2, ds})
-	sdl2.RenderCopy(display._renderer, display_main_tex(), nil, &dst)
-}
-
-_display_system_destroy :: proc(){
-	sdl2.DestroyRenderer(display._renderer)
-	sdl2.DestroyTexture(display.main_textures.textures[0])
-	sdl2.DestroyTexture(display.main_textures.textures[1])
-	sdl2.DestroyWindow(display._window)
-}
-
-//Any allocated hd texes need to be resized when this changes, fortunately than list is knowable and small.
-display_performance_mode_set :: proc(mode:DisplayPerformanceMode){
-	settings.performance_mode = mode
-
-	tex_resize(&display.hd_tex, DISPLAY_SIZE_HD)
-	tex_resize(&dialogue.hd_portraits_tex, DISPLAY_SIZE_HD)
-	if titleScreen,ok := cofind(TitleScreen, 0); ok{
-		tex_resize(&titleScreen.shineTex, sp.menuShineHD.size*2)
-		tex_resize(&titleScreen.perlinTex, DISPLAY_SIZE_HD)
-		tex_target_set(titleScreen.perlinTex,clear=false)
-		draw_clear(COLOR_BLACK)
-		tex_target_clear()
-	}
-}
-
-//Picks the strongest performance mode the hardware can handle by timing synthetic worst-case frames through the real render pipeline.
-//Runs once on first boot, the result gets saved with the other default settings.
-display_performance_mode_detect :: proc(){
-	trace("Performance mode detection")
-
-	warmupFrames :: 3 //discarded, absorbs driver shader compilation and other first-use costs
-	timedFrames :: 9
-	layers :: 8 //rough worst-case overdraw for a busy scene
-	frameBudget :: 8.0 //ms of pure fill per frame, leaving the rest of a 60fps frame for everything else
-
-	//source texture at half display size, drawn scaled 2x with linear sampling like real HD content
-	settings.performance_mode = .normal
-	srcTex := tex_make(DISPLAY_SIZE_HD/2, true)
-	defer tex_destroy(srcTex)
-	tex_target_set(srcTex)
-	draw_clear(DISPLAY_BASE_COLOR)
-	tex_target_clear()
-
-	display.hd_enabled = true
-	defer display.hd_enabled = false
-
-	for mode in DisplayPerformanceMode{
-		display_performance_mode_set(mode) //resizes the hd targets to the mode's true size
-
-		frameTimes:[timedFrames]f32
-		for i in 0..<warmupFrames+timedFrames{
-			startT := time_get()
-
-			tex_target_set(display.hd_tex)
-			for _ in 0..<layers do tex_draw_ex(srcTex, 0, 0, Vec2{2,2})
-			tex_target_clear()
-
-			//wait for the GPU to actually finish rendering, otherwise this would only time command submission
-			sdl2.RenderFlush(display._renderer)
-			gl.Finish()
-
-			if i >= warmupFrames do frameTimes[i-warmupFrames] = time_get()-startT
-		}
-
-		sort_general(frameTimes[:])
-		median := frameTimes[timedFrames/2]
-		printf("Performance benchmark: %v mode, %.2fms median fill time", mode, median)
-
-		if median <= frameBudget do break //this mode fits. If even potato doesn't, it stays selected as the floor
-	}
-}
-
-//Called whenever the render target changes, global renderer scale is adjusted in HD mode for performance.
-_render_scale_update :: proc "contextless" (){
-	scale:f32 = 1
-	if display.hd_enabled && sdl2.GetRenderTarget(display._renderer) != nil{
-		scale = 1/display_performance_factor()
-	}
-	sdl2.RenderSetScale(display._renderer, scale, scale)
-}
-
-display_performance_factor :: #force_inline proc "contextless"() -> f32{
-	return f32(DISPLAY_PERFORMANCE_FACTORS[settings.performance_mode])
-}
-
-display_apply_settings :: proc(){
-	window_set_fullscreen(settings.window_fullscreen)
-	window_resize(settings.window_scale)
-	display_performance_mode_set(settings.performance_mode)
 }
 
 //mainly for window resize shortcuts
@@ -368,4 +196,111 @@ _window_system_update :: proc(){
 		window_resize(newScale)
 		settings_save()
 	}
+}
+
+// DISPLAY MAIN TEXTURE
+
+//Redraws the current render target through the currently pushed shader, used to apply a screenwide effect.
+display_redraw :: proc(){
+	if display.hd_enabled do return //todo if needed
+
+	append(&render._entries, RenderEntrySnapshot{})
+	append(&render._quads, Quad{uvRect={0,0,1,1}, blend=BLEND_WHITE, flags={.fullscreen}})
+	append(&render._entries, RenderEntryQuad{u32(len(render._quads)-1)})
+}
+
+display_main_tex :: proc() -> Tex{
+	return display.hd_enabled ? display.hd_tex : display.main_tex
+}
+
+display_main_tex_draw :: proc(offset:Vec2=0){
+	if display.hd_enabled do tex_draw(display.hd_tex, offset)
+	else do tex_draw(display.main_tex, -round(stage.camera_pos_subpixel) + offset)
+}
+
+display_window_tex_draw :: proc(offset:Vec2=0){
+	tex_draw_ex(display.window_tex, offset, 1./f32(settings.window_scale))
+}
+
+//Copies the current screen contents to the snapshot scratch and returns it, e.g. for shaders that sample their destination.
+display_snapshot :: proc() -> Tex{
+	when DEBUG do tex := stage_edit.enabled ? stage_edit.draw_tex : display.main_tex
+	else do tex := display.main_tex
+
+	texBuffered_snapshot(tex)
+	return tex.scratch
+}
+
+//Returns a display size value that depends on whether HD mode is on or not. For performance and safety, only use in cases where this is uncertain.
+display_size :: #force_inline proc "contextless"() -> Vec2{
+	return display.hd_enabled ? DISPLAY_SIZE_HD : DISPLAY_SIZE
+}
+
+// DISPLAY DEPTH
+
+//Returns the depth of a depth layer
+layer_depth :: #force_inline proc "contextless" (layer:DepthLayer) -> f32{
+	return -f32(layer)*DEPTH_LAYER_RANGE + f32(DEPTH_LAYER_ZERO)*DEPTH_LAYER_RANGE
+}
+
+depthUnion_depth :: proc(du:DepthUnion)->f32{
+	switch d in du{
+		case f32: return d
+		case DepthLayer: return layer_depth(d)
+		case UILayer: return ui_layer_depth(d)
+	}
+	unreachable()
+}
+
+// DISPLAY SETTINGS
+
+display_apply_settings :: proc(){
+	window_set_fullscreen(settings.window_fullscreen)
+	window_resize(settings.window_scale)
+}
+
+// DISPLAY DRAWS
+
+_display_pre_draw :: proc(){
+	if display.hd_enabled do tex_target_set(display.hd_tex)
+	else do tex_target_set(display.main_tex) //buffered, so replay-resolved snapshots reach the scratch
+	draw_clear(DISPLAY_BASE_COLOR)
+
+	if !display.hd_enabled{
+		render_depth_layer(.ui, 100)
+		tex_target_set(display.window_tex, clear=false, coordScale=f32(settings.window_scale))
+		render_quad(display.main_tex, tex_sampler(display.main_tex), Quad{
+			worldRect = {0, DISPLAY_SIZE}, //coordScale expands this to the full target
+			uvRect = display_world_blit_uv(),
+			blend = BLEND_WHITE,
+		})
+	}
+	render_depth(INT_MAX_F32-1)
+}
+
+/*
+The world tex has a pixel of overdraw beyond the display size.
+This returns the uv rect of a display-sized window into it, offset by the camera's subpixel remainder quantized to whole window pixels, which pans the world smoothly while keeping every texel aligned to window pixels.
+*/
+display_world_blit_uv :: proc() -> [4]f32{
+	scale := f32(settings.window_scale)
+	shift := round(stage.camera_pos_subpixel*scale)/scale
+	texSize := Vec2(display.main_tex.size)
+	uvMin := shift/texSize
+	uvMax := (shift + DISPLAY_SIZE)/texSize
+	return {uvMin.x, uvMin.y, uvMax.x, uvMax.y}
+}
+
+_display_post_draw :: proc(){
+	render_depth_layer(.window)
+	tex_target_clear()
+	draw_clear(COLOR_BLACK, 255)
+	ws := window_size()
+	ds := DISPLAY_SIZE*f32(settings.window_scale)
+	presentTex := display.hd_enabled ? display.hd_tex : display.window_tex.tex
+	render_quad(presentTex, tex_sampler(presentTex), Quad{
+		worldRect = {(ws-ds)/2, ds},
+		uvRect = {0,0,1,1},
+		blend = BLEND_WHITE,
+	})
 }
